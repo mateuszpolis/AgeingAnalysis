@@ -23,7 +23,7 @@ Usage:
     from ageing_analysis.services import DataParser, GaussianFitService
 
     config = Config("config.json")
-    parser = DataParser(config.datasets[0])
+    parser = DataParser(config.datasets[0], debug_mode=False, prominence_percent=15)
     parser.process_all_files()
 """
 
@@ -96,6 +96,35 @@ def is_module_available():
         return info["name"] == "AgeingAnalysis"
     except Exception:
         return False
+
+
+def launch_module():
+    """Launch the ageing analysis GUI module.
+
+    This function creates and runs the main GUI application.
+
+    Raises:
+        ImportError: If GUI dependencies are not available
+        RuntimeError: If GUI cannot be initialized (e.g., no DISPLAY)
+    """
+    if not _GUI_AVAILABLE:
+        raise ImportError(
+            "GUI components are not available. Please install GUI dependencies."
+        )
+
+    try:
+        app = AgeingAnalysisApp()
+        app.run()
+    except Exception as e:
+        # Re-raise with more specific GUI-related error messages
+        error_msg = str(e).lower()
+        if any(keyword in error_msg for keyword in ["display", "tcl", "tk"]):
+            raise RuntimeError(f"GUI initialization failed: {e}")
+        else:
+            # For headless environments or other GUI-related issues
+            raise RuntimeError(
+                f"GUI cannot be launched (likely headless environment): {e}"
+            )
 
 
 # Main exports

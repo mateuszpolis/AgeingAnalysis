@@ -45,6 +45,29 @@ Examples:
         "--verbose", "-v", action="store_true", help="Enable verbose logging"
     )
 
+    parser.add_argument(
+        "--debug",
+        "-d",
+        action="store_true",
+        help="Enable debug mode - plots debug plots in various stages of the analysis",
+    )
+
+    parser.add_argument(
+        "--prominence-percent",
+        "-p",
+        type=float,
+        help="The prominence percentage to use for peak detection",
+        default=15,
+    )
+
+    parser.add_argument(
+        "--peak-merge-threshold",
+        "-m",
+        type=int,
+        help="The threshold for merging peaks when the bases are this close",
+        default=5,
+    )
+
     args = parser.parse_args()
 
     # Validate arguments
@@ -57,7 +80,13 @@ Examples:
         if not args.headless:
             print("Starting AgeingAnalysis application...")
 
-        app = AgeingAnalysisApp(headless=args.headless, config_path=args.config)
+        app = AgeingAnalysisApp(
+            headless=args.headless,
+            config_path=args.config,
+            debug_mode=args.debug,
+            prominence_percent=args.prominence_percent,
+            peak_merge_threshold=args.peak_merge_threshold,
+        )
 
         if args.headless:
             result_path = app.run(output_path=args.output)

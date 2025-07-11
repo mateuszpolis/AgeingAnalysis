@@ -23,23 +23,31 @@ from .services import (
 )
 from .utils import load_results, save_results
 
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+# Set up basic logging (will be reconfigured in AgeingAnalysisApp)
 logger = logging.getLogger(__name__)
 
 
 class AgeingAnalysisApp:
     """Main application class for the AgeingAnalysis module."""
 
-    def __init__(self, parent=None, headless=False, config_path=None):
+    def __init__(
+        self,
+        parent=None,
+        headless=False,
+        config_path=None,
+        debug_mode=False,
+        prominence_percent=None,
+        peak_merge_threshold=5,
+    ):
         """Initialize the AgeingAnalysis application.
 
         Args:
             parent: Parent window (optional, for integration with launcher)
             headless: If True, run without GUI (default: False)
             config_path: Path to configuration file (optional)
+            debug_mode: If True, enable debug logging and debug plots (default: False)
+            prominence_percent: Prominence percentage for peak detection (optional)
+            peak_merge_threshold: Threshold for merging peaks when bases are this close
         """
         self.parent = parent
         self.root = None
@@ -47,6 +55,12 @@ class AgeingAnalysisApp:
         self.headless = headless
         self.config = None
         self.results_path = None
+        self.debug_mode = debug_mode
+        self.prominence_percent = prominence_percent
+        self.peak_merge_threshold = peak_merge_threshold
+
+        # Configure logging based on debug mode
+        self._configure_logging()
 
         # Module configuration
         self.module_path = Path(__file__).parent
@@ -55,7 +69,34 @@ class AgeingAnalysisApp:
         if config_path:
             self._load_config(config_path)
 
-        logger.info(f"AgeingAnalysis application initialized (headless: {headless})")
+        logger.info(
+            f"AgeingAnalysis application initialized "
+            f"(headless: {headless}, debug_mode: {debug_mode}, "
+            f"prominence_percent: {prominence_percent}, "
+            f"peak_merge_threshold: {peak_merge_threshold})"
+        )
+
+    def _configure_logging(self):
+        """Configure logging based on debug mode."""
+        log_level = logging.DEBUG if self.debug_mode else logging.INFO
+        log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+        # Configure the root logger
+        logging.basicConfig(
+            level=log_level,
+            format=log_format,
+            force=True,  # Override any existing configuration
+        )
+
+        # Also set the level for specific loggers we care about
+        logging.getLogger("ageing_analysis").setLevel(log_level)
+
+        if self.debug_mode:
+            logger.info(
+                "Debug mode enabled - verbose logging and debug plots will be generated"
+            )
+        else:
+            logger.info("Standard logging mode")
 
     def _load_config(self, config_path):
         """Load configuration from file.
@@ -369,7 +410,12 @@ class AgeingAnalysisApp:
             # Step 1: Parse data for all datasets
             for i, dataset in enumerate(self.config.datasets):
                 progress.add_log_message(f"Parsing data for dataset {dataset.date}...")
-                parser = DataParser(dataset)
+                parser = DataParser(
+                    dataset,
+                    debug_mode=self.debug_mode,
+                    prominence_percent=self.prominence_percent,
+                    peak_merge_threshold=self.peak_merge_threshold,
+                )
                 parser.process_all_files()
                 progress.update_progress(
                     10 + (i + 1) * 15, f"Parsed dataset {dataset.date}"
@@ -455,7 +501,12 @@ class AgeingAnalysisApp:
             logger.info("Parsing data files...")
             for i, dataset in enumerate(self.config.datasets):
                 logger.info(f"Parsing data for dataset {dataset.date}...")
-                parser = DataParser(dataset)
+                parser = DataParser(
+                    dataset,
+                    debug_mode=self.debug_mode,
+                    prominence_percent=self.prominence_percent,
+                    peak_merge_threshold=self.peak_merge_threshold,
+                )
                 parser.process_all_files()
                 logger.info(
                     f"Parsed dataset {dataset.date} ({i+1}/{len(self.config.datasets)})"
@@ -592,7 +643,12 @@ class AgeingAnalysisApp:
 
         try:
             for dataset in self.config.datasets:
-                parser = DataParser(dataset)
+                parser = DataParser(
+                    dataset,
+                    debug_mode=self.debug_mode,
+                    prominence_percent=self.prominence_percent,
+                    peak_merge_threshold=self.peak_merge_threshold,
+                )
                 parser.process_all_files()
 
             self._add_result_text("Data parsing completed successfully")
@@ -745,6 +801,29 @@ Examples:
         "--verbose", "-v", action="store_true", help="Enable verbose logging"
     )
 
+    parser.add_argument(
+        "--debug",
+        "-d",
+        action="store_true",
+        help="Enable debug mode - plots debug plots in various stages of the analysis",
+    )
+
+    parser.add_argument(
+        "--prominence-percent",
+        "-p",
+        type=float,
+        help="The prominence percentage to use for peak detection",
+        default=15,
+    )
+
+    parser.add_argument(
+        "--peak-merge-threshold",
+        "-m",
+        type=int,
+        help="The threshold for merging peaks when the bases are this close",
+        default=5,
+    )
+
     args = parser.parse_args()
 
     # Set up logging level
@@ -756,7 +835,13 @@ Examples:
         parser.error("--config is required when running in headless mode")
 
     try:
-        app = AgeingAnalysisApp(headless=args.headless, config_path=args.config)
+        app = AgeingAnalysisApp(
+            headless=args.headless,
+            config_path=args.config,
+            debug_mode=args.debug,
+            prominence_percent=args.prominence_percent,
+            peak_merge_threshold=args.peak_merge_threshold,
+        )
 
         if args.headless:
             result_path = app.run(output_path=args.output)

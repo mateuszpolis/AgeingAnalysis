@@ -52,8 +52,6 @@ class GaussianFitService:
             return 0
 
         x_data = np.arange(len(data_series))
-        if is_reference:
-            x_data += 100  # Adjust x_data for reference channels
         y_data = data_series.values
 
         initial_guess = [
@@ -65,7 +63,9 @@ class GaussianFitService:
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("error", OptimizeWarning)
+                print(f"Initial guess: {initial_guess}")
                 params, _ = curve_fit(self.gaussian, x_data, y_data, p0=initial_guess)
+                print(f"Params: {params}")
             return float(params[1])  # Gaussian mean
         except (OptimizeWarning, RuntimeError):
             logger.warning("Gaussian fit failed or covariance could not be estimated.")
