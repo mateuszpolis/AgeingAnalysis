@@ -25,6 +25,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install commitizen
+          pip install -e .[test]
+
+      - name: Run tests before release
+        run: |
+          pytest tests/unit/ -v --cov=ageing_analysis --cov-report=term-missing
 
       - name: Configure Git
         run: |

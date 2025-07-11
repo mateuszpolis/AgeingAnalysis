@@ -19,6 +19,7 @@ plotly>=5.0.0   # Optional for interactive plots
 # Testing dependencies
 pytest>=7.0.0
 pytest-cov>=4.0.0
+pytest-mock>=3.10.0
 scipy>=1.9.0
 
 # Optional: For enhanced plotting (if needed in the future)
