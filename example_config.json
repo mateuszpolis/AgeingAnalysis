@@ -1,0 +1,48 @@
+{
+    "basePath": "/path/to/data/root",
+    "inputs": [
+        {
+            "date": "2024-01-15",
+            "validateHeader": false,
+            "basePath": "experiment1/run1",
+            "files": {
+                "PMA0": "data-PMA0.csv",
+                "PMA1": "data-PMA1.csv",
+                "PMA2": "data-PMA2.csv",
+                "PMA3": "data-PMA3.csv"
+            },
+            "refCH": {
+                "PM": "PMA0",
+                "CH": [0, 1, 2, 3]
+            }
+        },
+        {
+            "date": "2024-01-20",
+            "validateHeader": false,
+            "basePath": "experiment1/run2",
+            "files": {
+                "PMA0": "data-PMA0.csv",
+                "PMA1": "data-PMA1.csv",
+                "PMA2": "data-PMA2.csv",
+                "PMA3": "data-PMA3.csv"
+            },
+            "refCH": {
+                "PM": "PMA0",
+                "CH": [0, 1, 2, 3]
+            }
+        },
+        {
+            "date": "2024-02-01",
+            "validateHeader": false,
+            "basePath": "/absolute/path/to/special/data",
+            "files": {
+                "PMA0": "special-data-PMA0.csv",
+                "PMA1": "special-data-PMA1.csv"
+            },
+            "refCH": {
+                "PM": "PMA0",
+                "CH": [0, 1, 2, 3]
+            }
+        }
+    ]
+}

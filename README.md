@@ -15,6 +15,8 @@ The AgeingAnalysis module provides a complete pipeline for processing FIT detect
 
 - **Data Analysis Pipeline**: Multi-stage processing of FIT detector data
 - **Interactive Visualization**: Tkinter-based GUI with matplotlib plotting
+- **Headless Mode**: Command-line interface for automated processing without GUI
+- **Flexible Configuration**: Global and dataset-specific base paths for easy data management
 - **Service Architecture**: Modular design with separate services for different analysis stages
 - **Progress Tracking**: Real-time progress updates during analysis
 - **Export Capabilities**: Save results in various formats
@@ -83,4 +85,4 @@ The module uses configuration files for:
 
 ## Contributing
 
-This module is part of the FIT Detector Toolkit project. Please follow the project's contributing guidelines. 
+This module is part of the FIT Detector Toolkit project. Please follow the project's contributing guidelines.

@@ -60,10 +60,17 @@ class Config:
 
         logger.debug(f"Found {len(config['inputs'])} input datasets in configuration")
 
+        # Get global basePath if provided
+        global_base_path = config.get("basePath", "")
+        if global_base_path:
+            logger.debug(f"Global basePath specified: {global_base_path}")
+        else:
+            logger.debug("No global basePath specified")
+
         # Log the current working directory
         logger.debug(f"Current working directory: {os.getcwd()}")
 
-        self.datasets = self._load_datasets(config["inputs"])
+        self.datasets = self._load_datasets(config["inputs"], global_base_path)
 
         logger.info(f"Config loaded successfully: {len(self.datasets)} datasets found.")
         logger.debug(self)
@@ -88,11 +95,14 @@ class Config:
 
         logger.info("Analysis results loaded successfully for visualization.")
 
-    def _load_datasets(self, inputs: List[Dict]) -> List[Dataset]:
+    def _load_datasets(
+        self, inputs: List[Dict], global_base_path: str = ""
+    ) -> List[Dataset]:
         """Load datasets from the config inputs.
 
         Args:
             inputs: List of input datasets from config.
+            global_base_path: Global base path to prepend to all dataset paths.
 
         Returns:
             List of Dataset objects.
@@ -103,28 +113,72 @@ class Config:
         root_dir = Path.cwd()
         logger.debug(f"Project root directory: {root_dir}")
 
+        # Resolve global base path
+        resolved_global_base_path = ""
+        if global_base_path:
+            if os.path.isabs(global_base_path):
+                resolved_global_base_path = global_base_path
+                logger.debug(
+                    f"Global basePath is absolute: {resolved_global_base_path}"
+                )
+            else:
+                resolved_global_base_path = os.path.abspath(
+                    os.path.join(root_dir, global_base_path)
+                )
+                logger.debug(
+                    f"Resolved global basePath from relative to absolute: "
+                    f"{resolved_global_base_path}"
+                )
+
         for input_data in inputs:
             date = input_data.get("date")
             if not date:
                 raise ValueError("date field missing in one of the input datasets")
 
-            # Get the base path
-            base_path = input_data.get("basePath", "")
-            logger.debug(f"Original base path for dataset {date}: {base_path}")
+            # Get the dataset-specific base path
+            dataset_base_path = input_data.get("basePath", "")
+            logger.debug(f"Original dataset base path for {date}: {dataset_base_path}")
 
-            # If the path is relative, make it absolute relative to the root directory
-            if not os.path.isabs(base_path):
-                base_path = os.path.abspath(os.path.join(root_dir, base_path))
-                logger.debug(f"Resolved relative path to: {base_path}")
+            # Combine global base path with dataset base path
+            if resolved_global_base_path and dataset_base_path:
+                # Both global and dataset paths exist
+                if os.path.isabs(dataset_base_path):
+                    # Dataset path is absolute, use it as-is (ignore global path)
+                    base_path = dataset_base_path
+                    logger.debug(f"Dataset path is absolute, using as-is: {base_path}")
+                else:
+                    # Dataset path is relative, combine with global path
+                    base_path = os.path.join(
+                        resolved_global_base_path, dataset_base_path
+                    )
+                    logger.debug(f"Combined global + dataset path: {base_path}")
+            elif resolved_global_base_path:
+                # Only global path exists
+                base_path = resolved_global_base_path
+                logger.debug(f"Using global path only: {base_path}")
+            elif dataset_base_path:
+                # Only dataset path exists
+                if os.path.isabs(dataset_base_path):
+                    base_path = dataset_base_path
+                    logger.debug(f"Using absolute dataset path: {base_path}")
+                else:
+                    base_path = os.path.abspath(
+                        os.path.join(root_dir, dataset_base_path)
+                    )
+                    logger.debug(f"Resolved relative dataset path: {base_path}")
             else:
-                logger.debug(f"Path is already absolute: {base_path}")
+                # No path specified, use current directory
+                base_path = str(root_dir)
+                logger.debug(f"No path specified, using current directory: {base_path}")
 
-            logger.debug(f"Final resolved base path: {base_path}")
+            # Normalize the path
+            base_path = os.path.normpath(base_path)
+            logger.debug(f"Final normalized base path for {date}: {base_path}")
 
             # Check if the path exists
             if not os.path.exists(base_path):
                 logger.warning(
-                    f"basePath {base_path} does not exist. Skipping dataset " f"{date}."
+                    f"basePath {base_path} does not exist. Skipping dataset {date}."
                 )
                 continue  # Skip this dataset instead of failing the entire analysis
             else:

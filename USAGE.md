@@ -59,27 +59,103 @@ python run_ageing_analysis.py --headless --config config.json --verbose
 
 ## Configuration File
 
-The configuration file should be in JSON format and specify the datasets to analyze:
+The configuration file should be in JSON format and specify the datasets to analyze. It supports both global and dataset-specific base paths for flexible file organization.
+
+### Basic Configuration Structure
 
 ```json
 {
-  "datasets": [
+  "basePath": "/path/to/data/root",
+  "inputs": [
     {
       "date": "2024-01-15",
-      "data_path": "/path/to/data/2024-01-15",
-      "modules": [
-        {
-          "name": "FT0-A",
-          "channels": [
-            {"id": 1, "name": "PMT_1"},
-            {"id": 2, "name": "PMT_2"}
-          ]
-        }
-      ]
+      "validateHeader": false,
+      "basePath": "experiment1/run1",
+      "files": {
+        "PMA0": "data-PMA0.csv",
+        "PMA1": "data-PMA1.csv",
+        "PMA2": "data-PMA2.csv"
+      },
+      "refCH": {
+        "PM": "PMA0",
+        "CH": [0, 1, 2, 3]
+      }
     }
   ]
 }
 ```
+
+### Global Base Path
+
+The optional `basePath` field at the root level sets a global base path that is prepended to all dataset paths:
+
+- **Absolute global path**: Used as-is
+- **Relative global path**: Resolved relative to the config file location
+
+### Dataset Base Paths
+
+Each dataset can have its own `basePath` field:
+
+- **Relative dataset path**: Combined with global base path (if specified)
+- **Absolute dataset path**: Used as-is, ignoring global base path
+- **No dataset path**: Uses global base path only
+
+### Path Resolution Examples
+
+1. **Global + Relative Dataset Path**:
+   ```json
+   {
+     "basePath": "/data/experiments",
+     "inputs": [
+       {
+         "date": "2024-01-15",
+         "basePath": "run1/session1"
+       }
+     ]
+   }
+   ```
+   Result: `/data/experiments/run1/session1`
+
+2. **Global + Absolute Dataset Path**:
+   ```json
+   {
+     "basePath": "/data/experiments",
+     "inputs": [
+       {
+         "date": "2024-01-15",
+         "basePath": "/special/location/data"
+       }
+     ]
+   }
+   ```
+   Result: `/special/location/data` (global path ignored)
+
+3. **Global Path Only**:
+   ```json
+   {
+     "basePath": "/data/experiments",
+     "inputs": [
+       {
+         "date": "2024-01-15"
+       }
+     ]
+   }
+   ```
+   Result: `/data/experiments`
+
+4. **Relative Paths from Config Location**:
+   ```json
+   {
+     "basePath": "data",
+     "inputs": [
+       {
+         "date": "2024-01-15",
+         "basePath": "run1"
+       }
+     ]
+   }
+   ```
+   Result: `<config_directory>/data/run1`
 
 ## Examples
 
