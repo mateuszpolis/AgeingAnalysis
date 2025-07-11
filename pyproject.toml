@@ -167,6 +167,12 @@ version_files = [
     "pyproject.toml:version",
     "ageing_analysis/__init__.py:__version__",
 ]
+tag_format = "v$version"
+update_changelog_on_bump = true
+bump_message = "bump: version $current_version → $new_version"
+changelog_format = "## v$version ($date)"
+changelog_merge_prerelease = true
+changelog_incremental = true
 style = [
     ["qmark", "fg:#ff9d00 bold"],
     ["question", "bold"],
@@ -179,3 +185,91 @@ style = [
     ["text", ""],
     ["disabled", "fg:#858585 italic"]
 ]
+
+# Commit message templates and validation
+[[tool.commitizen.customize.questions]]
+type = "list"
+name = "type"
+message = "Select the type of change you are committing:"
+choices = [
+    {value = "feat", name = "feat: A new feature"},
+    {value = "fix", name = "fix: A bug fix"},
+    {value = "docs", name = "docs: Documentation only changes"},
+    {value = "style", name = "style: Changes that do not affect the meaning of the code"},
+    {value = "refactor", name = "refactor: A code change that neither fixes a bug nor adds a feature"},
+    {value = "perf", name = "perf: A code change that improves performance"},
+    {value = "test", name = "test: Adding missing tests or correcting existing tests"},
+    {value = "build", name = "build: Changes that affect the build system or external dependencies"},
+    {value = "ci", name = "ci: Changes to our CI configuration files and scripts"},
+    {value = "chore", name = "chore: Other changes that don't modify src or test files"},
+    {value = "revert", name = "revert: Reverts a previous commit"},
+]
+
+[[tool.commitizen.customize.questions]]
+type = "input"
+name = "scope"
+message = "What is the scope of this change? (class or file name): (press [enter] to skip)"
+
+[[tool.commitizen.customize.questions]]
+type = "input"
+name = "subject"
+message = "Write a short, imperative tense description of the change:"
+
+[[tool.commitizen.customize.questions]]
+type = "input"
+name = "body"
+message = "Provide a longer description of the change: (press [enter] to skip)"
+
+[[tool.commitizen.customize.questions]]
+type = "confirm"
+name = "is_breaking_change"
+message = "Are there any breaking changes?"
+
+[[tool.commitizen.customize.questions]]
+type = "input"
+name = "breaking_change_content"
+message = "Describe the breaking changes:"
+when = "{{ answers.is_breaking_change }}"
+
+[[tool.commitizen.customize.questions]]
+type = "input"
+name = "footer"
+message = "Footer. Information about Breaking Changes and reference issues that this commit closes: (press [enter] to skip)"
+
+# Template for commit messages
+[tool.commitizen.customize.commit_parser]
+pattern = "^(?P<change_type>feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(?:\\((?P<scope>[^\\(\\)\\r\\n]*)\\))?(?P<breaking>!)?:\\s(?P<message>.*)?"
+schema = "<type>(<scope>): <subject>"
+
+[tool.commitizen.customize.changelog_generator]
+template = """
+## v$version ($date)
+
+{% for group, commits in commits | groupby('change_type') %}
+### {{ group | title }}
+
+{% for commit in commits %}
+- {{ commit.message }} {% if commit.scope %}({{ commit.scope }}){% endif %}
+{% endfor %}
+{% endfor %}
+"""
+
+[tool.commitizen.customize.info]
+path = "cz_conventional_commits"
+tag = "v$version"
+message_template = "{{change_type}}{% if scope %}({{scope}}){% endif %}{% if breaking %}!{% endif %}: {{message}}{% if body %}\n\n{{body}}{% endif %}{% if footer %}\n\n{{footer}}{% endif %}"
+example = "feat(parser): add support for new CSV format"
+schema = """
+<type>(<scope>): <subject>
+<BLANK LINE>
+<body>
+<BLANK LINE>
+<footer>
+"""
+info = """
+The commit contains the following structural elements:
+- fix: patches a bug in your codebase (PATCH)
+- feat: introduces a new feature to the codebase (MINOR)
+- BREAKING CHANGE: introduces a breaking API change (MAJOR)
+- types like build:, chore:, ci:, docs:, style:, refactor:, perf:, test: are also allowed
+"""

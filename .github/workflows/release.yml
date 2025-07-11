@@ -9,7 +9,7 @@ jobs:
     name: Automated Release
     runs-on: ubuntu-latest
     if: ${{ !contains(github.event.head_commit.message, 'bump:') }}
-    
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,7 +34,8 @@ jobs:
       - name: Check if release is needed
         id: check_release
         run: |
-          if cz check --rev-range HEAD~1..HEAD; then
+          # Check if there are any conventional commits since last release
+          if cz check --rev-range $(git describe --tags --abbrev=0 2>/dev/null || echo "HEAD~1")..HEAD; then
             echo "release_needed=true" >> $GITHUB_OUTPUT
           else
             echo "release_needed=false" >> $GITHUB_OUTPUT
@@ -44,50 +45,84 @@ jobs:
         if: steps.check_release.outputs.release_needed == 'true'
         run: |
           cz bump --yes
-          
+
       - name: Push changes
         if: steps.check_release.outputs.release_needed == 'true'
         run: |
           git push origin main --tags
 
-      - name: Get version
+      - name: Get version and changelog
         if: steps.check_release.outputs.release_needed == 'true'
         id: get_version
         run: |
           VERSION=$(cz version --project)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Build package
+          # Generate changelog for this release
+          CHANGELOG=$(cz changelog --dry-run --incremental)
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Build packages
         if: steps.check_release.outputs.release_needed == 'true'
         run: |
           python -m pip install build
           python -m build
 
+      - name: Create source code zip
+        if: steps.check_release.outputs.release_needed == 'true'
+        run: |
+          # Create a clean source archive excluding unnecessary files
+          mkdir -p release-assets
+
+          # Create source zip
+          git archive --format=zip --prefix=ageing-analysis-${{ steps.get_version.outputs.version }}/ HEAD > release-assets/ageing-analysis-${{ steps.get_version.outputs.version }}-source.zip
+
+          # Create binary distribution zip (includes built package)
+          cp -r dist/* release-assets/
+
+          # Create a complete package zip with documentation
+          mkdir -p package-temp/ageing-analysis-${{ steps.get_version.outputs.version }}
+          cp -r ageing_analysis package-temp/ageing-analysis-${{ steps.get_version.outputs.version }}/
+          cp -r docs package-temp/ageing-analysis-${{ steps.get_version.outputs.version }}/
+          cp README.md LICENSE CHANGELOG.md requirements.txt package-temp/ageing-analysis-${{ steps.get_version.outputs.version }}/
+          cp run_ageing_analysis.py package-temp/ageing-analysis-${{ steps.get_version.outputs.version }}/
+
+          cd package-temp
+          zip -r ../release-assets/ageing-analysis-${{ steps.get_version.outputs.version }}-complete.zip ageing-analysis-${{ steps.get_version.outputs.version }}/
+          cd ..
+
+          # List created assets
+          ls -la release-assets/
+
       - name: Create GitHub Release
         if: steps.check_release.outputs.release_needed == 'true'
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
-          release_name: Release v${{ steps.get_version.outputs.version }}
+          name: Release v${{ steps.get_version.outputs.version }}
           body: |
-            ## Changes
-            
-            $(cz changelog --dry-run --incremental)
+            ## Changes in v${{ steps.get_version.outputs.version }}
+
+            ${{ steps.get_version.outputs.changelog }}
+
+            ## Installation
+
+            ### Option 1: Download Complete Package
+            Download `ageing-analysis-${{ steps.get_version.outputs.version }}-complete.zip` for a ready-to-use package with all dependencies listed.
+
+            ### Option 2: Install from Source
+            Download `ageing-analysis-${{ steps.get_version.outputs.version }}-source.zip` and follow the installation instructions in the README.
+
+            ### Option 3: Install from PyPI (if available)
+            ```bash
+            pip install ageing-analysis==${{ steps.get_version.outputs.version }}
+            ```
+          files: |
+            release-assets/*
           draft: false
           prerelease: false
-
-      - name: Upload Release Assets
-        if: steps.check_release.outputs.release_needed == 'true'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/*.whl
-          asset_name: ageing_analysis-${{ steps.get_version.outputs.version }}-py3-none-any.whl
-          asset_content_type: application/x-wheel+zip
 
       - name: Publish to PyPI
         if: steps.check_release.outputs.release_needed == 'true' && github.repository == 'your-org/AgeingAnalysis'
@@ -96,4 +131,4 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           python -m pip install twine
-          python -m twine upload dist/* 
+          python -m twine upload dist/*
