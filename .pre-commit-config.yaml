@@ -54,9 +54,16 @@ repos:
       - id: bandit
         args: [--skip=B101,B601]
 
-  # Conventional commits validation
+    # Conventional commits validation with commitizen
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.12.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
+  # Additional conventional commits validation
   - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v2.4.0
+    rev: v3.5.0
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]

@@ -66,11 +66,16 @@ chore: update development tools
 
 ## Automatic Versioning
 
-The project uses [Commitizen](https://commitizen-tools.github.io/commitizen/) for automatic versioning:
+The project uses [Commitizen](https://commitizen-tools.github.io/commitizen/) for automatic semantic versioning:
 
-- **PATCH** (0.0.x): `fix:` commits
-- **MINOR** (0.x.0): `feat:` commits
-- **MAJOR** (x.0.0): commits with breaking changes
+- **PATCH** (x.y.Z): `fix:` commits increment the patch version by 0.0.1
+- **MINOR** (x.Y.0): `feat:` commits increment the minor version by 0.1.0
+- **MAJOR** (X.0.0): commits with breaking changes increment the major version by 1.0.0
+
+For example:
+- `fix: resolve parsing bug` → version 1.2.3 → 1.2.4
+- `feat: add new CSV export` → version 1.2.3 → 1.3.0
+- `feat!: remove deprecated API` → version 1.2.3 → 2.0.0
 
 ## How to Use
 
@@ -105,7 +110,41 @@ This will guide you through:
 
 ### Option 3: Pre-commit Hook
 
-The project includes a pre-commit hook that validates commit messages. If your commit message doesn't follow the conventional format, it will be rejected.
+The project includes **strict** pre-commit hooks that validate commit messages. **All commits MUST follow the conventional commit format** - non-conventional commits will be rejected.
+
+The validation includes:
+- **Commitizen validation**: Ensures the commit message follows the exact conventional commit format
+- **Conventional pre-commit validation**: Additional validation for commit message structure
+- **Required format**: `<type>(<scope>): <subject>`
+
+#### Allowed commit types:
+- `feat`: New features
+- `fix`: Bug fixes
+- `docs`: Documentation changes
+- `style`: Code style changes (formatting, etc.)
+- `refactor`: Code refactoring
+- `perf`: Performance improvements
+- `test`: Test additions/changes
+- `build`: Build system changes
+- `ci`: CI configuration changes
+- `chore`: Maintenance tasks
+- `revert`: Revert previous commits
+
+#### Examples of REJECTED commits:
+```bash
+git commit -m "update readme"           # ❌ Missing type
+git commit -m "added new feature"       # ❌ Wrong format
+git commit -m "Fix bug in parser"       # ❌ Capitalized type
+git commit -m "feature: add export"     # ❌ Wrong type name
+```
+
+#### Examples of ACCEPTED commits:
+```bash
+git commit -m "feat: add CSV export functionality"
+git commit -m "fix: resolve parsing error"
+git commit -m "docs: update installation guide"
+git commit -m "feat(parser): support new data format"
+```
 
 ## Release Process
 
