@@ -1,13 +1,17 @@
+"""Dataset entity for FIT detector ageing analysis."""
+
+import logging
 import os
-import re
 from typing import Any, Dict, List
 
-from configs.logger_config import logger
-from fit_detector.apps.ageing.entities.module import Module
+from ..utils.validation import validate_file_identifier
+from .module import Module
+
+logger = logging.getLogger(__name__)
 
 
 class Dataset:
-    """Represents a single dataset with a collection of modules and reference module information."""
+    """Represents a single dataset with a collection of modules."""
 
     def __init__(
         self,
@@ -20,20 +24,25 @@ class Dataset:
         """Initialize and validate the dataset.
 
         Args:
-            date (str): Date for the dataset.
-            base_path (str): Base path for the files.
-            files (dict): Dictionary of PM files with their paths.
-            ref_ch (dict): Reference module and channel information.
-            validate_header (bool): Whether to validate headers in the files.
+            date: Date for the dataset.
+            base_path: Base path for the files.
+            files: Dictionary of PM files with their paths.
+            ref_ch: Reference module and channel information.
+            validate_header: Whether to validate headers in the files.
         """
         self.date: str = date
         self.modules: List[Module] = self._initialize_modules(
             base_path, files, ref_ch, validate_header
         )
         self._reference_module: Module = self._get_reference_module(ref_ch)
-        self._reference_means: Dict[str, float] = {"gaussian_mean": 0.0, "weighted_mean": 0.0}
+        self._reference_means: Dict[str, float] = {
+            "gaussian_mean": 0.0,
+            "weighted_mean": 0.0,
+        }
 
-        logger.debug(f"Dataset {date} loaded successfully with {len(self.modules)} modules")
+        logger.debug(
+            f"Dataset {date} loaded successfully with {len(self.modules)} modules"
+        )
 
     def _initialize_modules(
         self,
@@ -42,30 +51,27 @@ class Dataset:
         ref_ch: Dict[str, Any],
         validate_header: bool,
     ) -> List[Module]:
-        """Load and validate modules
+        """Load and validate modules.
 
         Args:
-            base_path (str): Base path for the files.
-            files (Dict[str, str]): Dictionary of PM files with their paths.
-            ref_ch (Dict[str, Any]): Reference module and channel information.
-            validate_header (bool): Whether to validate headers in the files.
+            base_path: Base path for the files.
+            files: Dictionary of PM files with their paths.
+            ref_ch: Reference module and channel information.
+            validate_header: Whether to validate headers in files.
 
         Returns:
-            List[Module]: List of Module objects.
+            List of Module objects.
         """
         modules = []
         ref_pm = ref_ch.get("PM")
         ref_channels = ref_ch.get("CH", [])
 
-        # Define the valid naming pattern for file names (PM0A to PM9A and PM0C to PM9C)
-        valid_pattern = re.compile(r"^PM[AC][0-9]$")
-
         for identifier, file_name in files.items():
             # Validate the file identifier against the expected pattern
-            if not valid_pattern.match(identifier):
+            if not validate_file_identifier(identifier):
                 raise ValueError(
                     f"Invalid file identifier '{identifier}'. "
-                    f"Expected format is PM0A-PM9A or PM0C-PM9C."
+                    f"Expected format is PMA0-PMA9 or PMC0-PMC9."
                 )
 
             file_path = os.path.join(base_path, file_name.strip())
@@ -87,25 +93,27 @@ class Dataset:
         """Get the reference module from the list of modules.
 
         Args:
-            ref_ch (Dict[str, Any]): Reference module and channel information.
+            ref_ch: Reference module and channel information.
 
         Raises:
             Exception: If the reference module is not found.
 
         Returns:
-            Module: The reference module.
+            The reference module.
         """
         ref_pm = ref_ch.get("PM")
         for module in self.modules:
             if module.identifier == ref_pm:
                 return module
-        raise Exception(f"Reference module {ref_pm} not found in files for dataset {self.date}")
+        raise Exception(
+            f"Reference module {ref_pm} not in files for dataset {self.date}"
+        )
 
     def get_reference_module(self) -> Module:
         """Return the reference module.
 
         Returns:
-            Module: The reference module.
+            The reference module.
         """
         return self._reference_module
 
@@ -113,7 +121,7 @@ class Dataset:
         """Return the reference Gaussian mean.
 
         Returns:
-            float: The reference Gaussian mean.
+            The reference Gaussian mean.
         """
         return self._reference_means["gaussian_mean"]
 
@@ -121,7 +129,7 @@ class Dataset:
         """Return the reference weighted mean.
 
         Returns:
-            float: The reference weighted mean.
+            The reference weighted mean.
         """
         return self._reference_means["weighted_mean"]
 
@@ -129,8 +137,8 @@ class Dataset:
         """Set the reference Gaussian and weighted means.
 
         Args:
-            gaussian_mean (float): The reference Gaussian mean.
-            weighted_mean (float): The reference weighted mean.
+            gaussian_mean: The reference Gaussian mean.
+            weighted_mean: The reference weighted mean.
         """
         self._reference_means.update(
             {
@@ -143,10 +151,10 @@ class Dataset:
         """Convert the dataset to a dictionary.
 
         Args:
-            include_signal_data (bool, optional): Whether to include signal data. Defaults to False.
+            include_signal_data: Whether to include signal data.
 
         Returns:
-            Dict: Dictionary representation of the dataset.
+            Dictionary representation of the dataset.
         """
         return {
             "date": self.date,
@@ -155,7 +163,7 @@ class Dataset:
         }
 
     def __str__(self):
-        """String representation of the Dataset."""
+        """Return string representation of the Dataset."""
         modules_str = ", ".join(str(module) for module in self.modules)
         return (
             f"Dataset(date={self.date}, modules=[{modules_str}], "
@@ -163,4 +171,5 @@ class Dataset:
         )
 
     def __repr__(self):
+        """Return string representation of the Dataset."""
         return self.__str__()

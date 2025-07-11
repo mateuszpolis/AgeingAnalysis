@@ -1,11 +1,13 @@
 """GUI module for AgeingAnalysis.
 
-This module will contain the GUI components migrated from the old implementation.
+This module contains the graphical user interface components for the ageing analysis,
+including plotting widgets, progress windows, and the main application interface.
 """
 
-# TODO: Migrate GUI components from old implementation
-# - Progress windows
-# - Analysis interface
-# - Visualization components
+from .plotting_widget import AgeingPlotWidget
+from .progress_window import ProgressWindow
 
-__all__ = [] 
+__all__ = [
+    "AgeingPlotWidget",
+    "ProgressWindow",
+]

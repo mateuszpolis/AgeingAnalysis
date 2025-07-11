@@ -1,11 +1,16 @@
+"""Channel entity for FIT detector ageing analysis."""
+
+import logging
 import math
 from typing import Dict, Union
 
 import pandas as pd
 
+logger = logging.getLogger(__name__)
+
 
 class Channel:
-    """Represents a single channel in a dataset (combination of two columns from the data)."""
+    """Represents a single channel in a dataset (combination of two columns)."""
 
     def __init__(
         self,
@@ -17,11 +22,10 @@ class Channel:
         """Initialize a Channel object.
 
         Args:
-            name (str): Name of the channel in format "CHx", where x is the channel number.
-            signal_data (pd.Series): Signal Data for the channel.
-            noise_data (pd.Series): Noise Data for the channel.
-            is_reference (bool, optional): Whether the channel is a reference channel.
-                Defaults to False.
+            name: Name of the channel in format "CHx", where x is the channel number.
+            signal_data: Signal Data for the channel.
+            noise_data: Noise Data for the channel.
+            is_reference: Whether the channel is a reference channel.
         """
         self.name = name
         self.data = signal_data
@@ -39,7 +43,7 @@ class Channel:
         """Get the Gaussian mean for the Channel.
 
         Returns:
-            float: The Gaussian mean.
+            The Gaussian mean.
         """
         return self._means["gaussian_mean"]
 
@@ -47,32 +51,34 @@ class Channel:
         """Get the weighted mean for the Channel.
 
         Returns:
-            float: The weighted mean.
+            The weighted mean.
         """
         return self._means["weighted_mean"]
 
-    def get_gauss_ageing_factor(self) -> float | str:
+    def get_gauss_ageing_factor(self) -> Union[float, str]:
         """Get the Gaussian ageing factor for the Channel.
 
         Returns:
-            float: The Gaussian ageing factor.
+            The Gaussian ageing factor.
         """
         return self._ageing_factors["gaussian_ageing_factor"]
 
-    def get_weighted_ageing_factor(self) -> float | str:
+    def get_weighted_ageing_factor(self) -> Union[float, str]:
         """Get the weighted ageing factor for the Channel.
 
         Returns:
-            float: The weighted ageing factor.
+            The weighted ageing factor.
         """
         return self._ageing_factors["weighted_ageing_factor"]
 
-    def set_ageing_factors(self, gaussian_ageing_factor: float, weighted_ageing_factor: float):
+    def set_ageing_factors(
+        self, gaussian_ageing_factor: float, weighted_ageing_factor: float
+    ):
         """Set the Gaussian and weighted ageing factors for the Channel.
 
         Args:
-            gaussian_ageing_factor (float): Gaussian ageing factor.
-            weighted_ageing_factor (float): Weighted ageing factor.
+            gaussian_ageing_factor: Gaussian ageing factor.
+            weighted_ageing_factor: Weighted ageing factor.
         """
         self._ageing_factors.update(
             {
@@ -85,7 +91,7 @@ class Channel:
         """Set the normalized Gaussian and weighted ageing factors for the Channel.
 
         Args:
-            divisors (Dict[str, float]): Dictionary containing divisors for normalization.
+            divisors: Dictionary containing divisors for normalization.
         """
         try:
             gauss_factor = self.get_gauss_ageing_factor()
@@ -110,14 +116,25 @@ class Channel:
         """Set the Gaussian and weighted means for the Channel.
 
         Args:
-            gaussian_mean (float): Gaussian mean.
-            weighted_mean (float): Weighted mean.
+            gaussian_mean: Gaussian mean.
+            weighted_mean: Weighted mean.
         """
-        self._means.update({"gaussian_mean": gaussian_mean, "weighted_mean": weighted_mean})
+        self._means.update(
+            {"gaussian_mean": gaussian_mean, "weighted_mean": weighted_mean}
+        )
 
     def to_dict(self, include_signal_data: bool = False) -> Dict:
-        """Convert the Channel to a dictionary."""
-        if math.isnan(self._means["gaussian_mean"]) or math.isnan(self._means["weighted_mean"]):
+        """Convert the Channel to a dictionary.
+
+        Args:
+            include_signal_data: Whether to include signal data in the output.
+
+        Returns:
+            Dictionary representation of the channel.
+        """
+        if math.isnan(self._means["gaussian_mean"]) or math.isnan(
+            self._means["weighted_mean"]
+        ):
             return {"name": self.name, "means": "N/A", "ageing_factors": "N/A"}
 
         channel_dict = {
@@ -135,12 +152,14 @@ class Channel:
         return channel_dict
 
     def __str__(self):
-        id = int(self.name[2:])
-        first_column, second_column = id * 2 - 1, id * 2
+        """Return string representation of the Channel."""
+        channel_id = int(self.name[2:])
+        first_column, second_column = channel_id * 2 - 1, channel_id * 2
         return (
             f"Channel(name={self.name}, columns=({first_column}, {second_column}), "
             f"is_reference={self.is_reference})"
         )
 
     def __repr__(self):
+        """Return string representation of the Channel."""
         return str(self)

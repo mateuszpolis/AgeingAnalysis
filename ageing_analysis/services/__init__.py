@@ -1,13 +1,19 @@
 """Services module for AgeingAnalysis.
 
-This module will contain the core analysis services migrated from the old implementation.
+This module contains all the service classes that handle the core analysis logic
+for the ageing analysis process.
 """
 
-# TODO: Migrate services from old implementation
-# - DataParser
-# - GaussianFitService  
-# - ReferenceChannelService
-# - AgeingCalculationService
-# - DataNormalizer
+from .ageing_calculator import AgeingCalculationService
+from .data_normalizer import DataNormalizer
+from .data_parser import DataParser
+from .gaussian_fit import GaussianFitService
+from .reference_channel import ReferenceChannelService
 
-__all__ = [] 
+__all__ = [
+    "DataParser",
+    "GaussianFitService",
+    "AgeingCalculationService",
+    "ReferenceChannelService",
+    "DataNormalizer",
+]

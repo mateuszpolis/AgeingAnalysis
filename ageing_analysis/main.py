@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-"""
-Main entry point for the AgeingAnalysis module.
+"""Main entry point for the AgeingAnalysis module.
 
 This module provides a complete ageing analysis pipeline for FIT detector data,
 including data processing, statistical analysis, and interactive visualization.
@@ -11,176 +8,505 @@ including data processing, statistical analysis, and interactive visualization.
 import logging
 import sys
 import tkinter as tk
-from tkinter import messagebox
 from pathlib import Path
-from typing import Optional
+from tkinter import filedialog, messagebox, ttk
+
+from .entities import Config
+from .gui import AgeingPlotWidget, ProgressWindow
+from .services import (
+    AgeingCalculationService,
+    DataNormalizer,
+    DataParser,
+    GaussianFitService,
+    ReferenceChannelService,
+)
+from .utils import load_results, save_results
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
 
 class AgeingAnalysisApp:
     """Main application class for the AgeingAnalysis module."""
-    
+
     def __init__(self, parent=None):
         """Initialize the AgeingAnalysis application.
-        
+
         Args:
             parent: Parent window (optional, for integration with launcher)
         """
         self.parent = parent
         self.root = None
         self.is_standalone = parent is None
-        
+        self.config = None
+        self.results_path = None
+
         # Module configuration
         self.module_path = Path(__file__).parent
-        self.config = self._load_config()
-        
+
         logger.info("AgeingAnalysis application initialized")
-    
-    def _load_config(self):
-        """Load module configuration."""
-        # TODO: Implement configuration loading
-        # For now, return default configuration
-        return {
-            "data_path": self.module_path / "data",
-            "output_path": self.module_path / "output",
-            "temp_path": self.module_path / "temp",
-        }
-    
+
     def _create_gui(self):
         """Create the main GUI interface."""
         if self.is_standalone:
             self.root = tk.Tk()
         else:
             self.root = tk.Toplevel(self.parent)
-        
+
         # Configure window
         self.root.title("AgeingAnalysis - FIT Detector Toolkit")
-        self.root.geometry("1200x800")
-        self.root.minsize(800, 600)
-        
-        # Create main frame
-        main_frame = tk.Frame(self.root)
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        # Create placeholder content
-        self._create_placeholder_content(main_frame)
-        
+        self.root.geometry("1400x900")
+        self.root.minsize(1000, 700)
+
+        # Create menu bar
+        self._create_menu_bar()
+
+        # Create main notebook for tabs
+        self.notebook = ttk.Notebook(self.root)
+        self.notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        # Create analysis tab
+        self._create_analysis_tab()
+
+        # Create visualization tab
+        self._create_visualization_tab()
+
+        # Create status bar
+        self._create_status_bar()
+
         # Set up window closing
         self.root.protocol("WM_DELETE_WINDOW", self._on_closing)
-        
+
         logger.info("GUI interface created")
-    
-    def _create_placeholder_content(self, parent):
-        """Create placeholder content for development."""
+
+    def _create_menu_bar(self):
+        """Create the menu bar."""
+        menubar = tk.Menu(self.root)
+        self.root.config(menu=menubar)
+
+        # File menu
+        file_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="File", menu=file_menu)
+        file_menu.add_command(label="Load Config...", command=self._load_config_file)
+        file_menu.add_command(label="Load Results...", command=self._load_results_file)
+        file_menu.add_separator()
+        file_menu.add_command(label="Save Results...", command=self._save_results)
+        file_menu.add_command(label="Export to CSV...", command=self._export_csv)
+        file_menu.add_separator()
+        file_menu.add_command(label="Exit", command=self._on_closing)
+
+        # Analysis menu
+        analysis_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Analysis", menu=analysis_menu)
+        analysis_menu.add_command(
+            label="Run Full Analysis", command=self._run_full_analysis
+        )
+        analysis_menu.add_separator()
+        analysis_menu.add_command(
+            label="Parse Data Only", command=self._parse_data_only
+        )
+        analysis_menu.add_command(
+            label="Fit Gaussians Only", command=self._fit_gaussians_only
+        )
+
+        # Help menu
+        help_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Help", menu=help_menu)
+        help_menu.add_command(label="About", command=self._show_about)
+
+    def _create_analysis_tab(self):
+        """Create the analysis tab."""
+        self.analysis_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.analysis_frame, text="Analysis")
+
+        # Main content frame
+        main_frame = ttk.Frame(self.analysis_frame)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+
         # Title
-        title_label = tk.Label(
-            parent,
-            text="AgeingAnalysis Module",
-            font=("Arial", 24, "bold"),
-            fg="navy"
+        title_label = ttk.Label(
+            main_frame,
+            text="FIT Detector Ageing Analysis",
+            font=("TkDefaultFont", 20, "bold"),
         )
-        title_label.pack(pady=20)
-        
-        # Description
-        desc_text = """
-        This is the AgeingAnalysis module for the FIT Detector Toolkit.
-        
-        Features:
-        • Data parsing and preprocessing
-        • Gaussian fitting and statistical analysis
-        • Reference channel calculations
-        • Ageing factor computation and normalization
-        • Interactive visualization and plotting
-        
-        Status: Module structure created - implementation pending
-        """
-        
-        desc_label = tk.Label(
-            parent,
-            text=desc_text,
-            font=("Arial", 12),
-            justify=tk.LEFT,
-            wraplength=600
+        title_label.pack(pady=(0, 20))
+
+        # Configuration section
+        config_frame = ttk.LabelFrame(main_frame, text="Configuration", padding="10")
+        config_frame.pack(fill=tk.X, pady=(0, 20))
+
+        ttk.Button(
+            config_frame,
+            text="Load Configuration File",
+            command=self._load_config_file,
+            style="Large.TButton",
+        ).pack(pady=5)
+
+        self.config_status_var = tk.StringVar(value="No configuration loaded")
+        ttk.Label(config_frame, textvariable=self.config_status_var).pack(pady=5)
+
+        # Analysis section
+        analysis_frame = ttk.LabelFrame(main_frame, text="Analysis", padding="10")
+        analysis_frame.pack(fill=tk.X, pady=(0, 20))
+
+        button_frame = ttk.Frame(analysis_frame)
+        button_frame.pack(pady=10)
+
+        self.run_analysis_btn = ttk.Button(
+            button_frame,
+            text="Run Full Analysis",
+            command=self._run_full_analysis,
+            state=tk.DISABLED,
+            style="Large.TButton",
         )
-        desc_label.pack(pady=20)
-        
-        # Migration info
-        old_path = self.module_path.parent / "old"
-        if old_path.exists():
-            migration_text = f"""
-            Legacy Code Available:
-            Found existing implementation in /old directory
-            ({len(list(old_path.rglob('*.py')))} Python files)
-            
-            Ready for migration to new module structure.
-            """
-            
-            migration_label = tk.Label(
-                parent,
-                text=migration_text,
-                font=("Arial", 10),
-                fg="green",
-                justify=tk.LEFT,
-                wraplength=600
-            )
-            migration_label.pack(pady=10)
-        
-        # Action buttons
-        button_frame = tk.Frame(parent)
-        button_frame.pack(pady=30)
-        
-        # Placeholder buttons
-        tk.Button(
+        self.run_analysis_btn.pack(side=tk.LEFT, padx=10)
+
+        ttk.Button(
             button_frame,
-            text="Load Data",
-            command=self._placeholder_action,
-            width=15,
-            height=2
+            text="Load Existing Results",
+            command=self._load_results_file,
+            style="Large.TButton",
         ).pack(side=tk.LEFT, padx=10)
-        
-        tk.Button(
-            button_frame,
-            text="Run Analysis",
-            command=self._placeholder_action,
-            width=15,
-            height=2
-        ).pack(side=tk.LEFT, padx=10)
-        
-        tk.Button(
-            button_frame,
-            text="View Results",
-            command=self._placeholder_action,
-            width=15,
-            height=2
-        ).pack(side=tk.LEFT, padx=10)
-        
-        # Status bar
-        self.status_var = tk.StringVar(value="Ready - Module structure created")
-        status_bar = tk.Label(
-            parent,
+
+        # Results section
+        results_frame = ttk.LabelFrame(main_frame, text="Results", padding="10")
+        results_frame.pack(fill=tk.BOTH, expand=True)
+
+        self.results_text = tk.Text(results_frame, height=10, state=tk.DISABLED)
+        scrollbar = ttk.Scrollbar(
+            results_frame, orient=tk.VERTICAL, command=self.results_text.yview
+        )
+        self.results_text.configure(yscrollcommand=scrollbar.set)
+
+        self.results_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+    def _create_visualization_tab(self):
+        """Create the visualization tab."""
+        self.viz_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.viz_frame, text="Visualization")
+
+        # Create plotting widget
+        self.plot_widget = AgeingPlotWidget(self.viz_frame)
+
+        # Load results button if no data is loaded
+        if not self.plot_widget.data:
+            load_frame = ttk.Frame(self.viz_frame)
+            load_frame.pack(fill=tk.X, padx=10, pady=10)
+
+            ttk.Button(
+                load_frame,
+                text="Load Results for Visualization",
+                command=self._load_results_for_viz,
+            ).pack()
+
+    def _create_status_bar(self):
+        """Create status bar at the bottom."""
+        self.status_var = tk.StringVar(value="Ready")
+        status_bar = ttk.Label(
+            self.root,
             textvariable=self.status_var,
             relief=tk.SUNKEN,
             anchor=tk.W,
-            font=("Arial", 10)
+            padding=(5, 2),
         )
-        status_bar.pack(side=tk.BOTTOM, fill=tk.X, pady=(20, 0))
-    
-    def _placeholder_action(self):
-        """Placeholder action for buttons."""
-        messagebox.showinfo(
-            "Module Status",
-            "This is a placeholder action.\n\n"
-            "The module structure has been created but the implementation "
-            "is not yet complete. The existing code in /old directory "
-            "is ready to be migrated to this new structure."
-        )
-    
+        status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+
+    def _load_config_file(self):
+        """Load a configuration file."""
+        try:
+            file_path = filedialog.askopenfilename(
+                title="Load Configuration File",
+                filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            )
+
+            if file_path:
+                self.config = Config(file_path)
+                self.config_status_var.set(
+                    f"Configuration loaded: {len(self.config.datasets)} datasets"
+                )
+                self.run_analysis_btn.config(state=tk.NORMAL)
+                self._add_result_text(f"Configuration loaded from {file_path}")
+                self.status_var.set("Configuration loaded successfully")
+
+        except Exception as e:
+            error_msg = f"Failed to load configuration: {str(e)}"
+            logger.error(error_msg)
+            messagebox.showerror("Error", error_msg)
+            self.status_var.set("Error loading configuration")
+
+    def _load_results_file(self):
+        """Load an existing results file."""
+        try:
+            file_path = filedialog.askopenfilename(
+                title="Load Results File",
+                filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            )
+
+            if file_path:
+                results = load_results(file_path)
+                self._display_results(results)
+                self.results_path = file_path
+                self.status_var.set("Results loaded successfully")
+
+                # Load into visualization tab
+                self.plot_widget.load_from_json_file(file_path)
+
+        except Exception as e:
+            error_msg = f"Failed to load results: {str(e)}"
+            logger.error(error_msg)
+            messagebox.showerror("Error", error_msg)
+            self.status_var.set("Error loading results")
+
+    def _load_results_for_viz(self):
+        """Load results specifically for visualization."""
+        self._load_results_file()
+
+    def _save_results(self):
+        """Save current results to file."""
+        if not self.config:
+            messagebox.showwarning("Warning", "No analysis results to save")
+            return
+
+        try:
+            file_path = filedialog.asksaveasfilename(
+                title="Save Results",
+                defaultextension=".json",
+                filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            )
+
+            if file_path:
+                saved_path = save_results(self.config, file_path)
+                self.results_path = saved_path
+                self._add_result_text(f"Results saved to {saved_path}")
+                self.status_var.set("Results saved successfully")
+
+        except Exception as e:
+            error_msg = f"Failed to save results: {str(e)}"
+            logger.error(error_msg)
+            messagebox.showerror("Error", error_msg)
+
+    def _export_csv(self):
+        """Export results to CSV format."""
+        if not self.config:
+            messagebox.showwarning("Warning", "No analysis results to export")
+            return
+
+        try:
+            from .utils import export_results_csv
+
+            file_path = filedialog.asksaveasfilename(
+                title="Export to CSV",
+                defaultextension=".csv",
+                filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+            )
+
+            if file_path:
+                results_dict = self.config.to_dict()
+                export_results_csv(results_dict, file_path)
+                self._add_result_text(f"Results exported to {file_path}")
+                self.status_var.set("Results exported successfully")
+
+        except Exception as e:
+            error_msg = f"Failed to export to CSV: {str(e)}"
+            logger.error(error_msg)
+            messagebox.showerror("Error", error_msg)
+
+    def _run_full_analysis(self):
+        """Run the complete analysis pipeline."""
+        if not self.config:
+            messagebox.showwarning("Warning", "Please load a configuration file first")
+            return
+
+        # Create progress window
+        progress_window = tk.Toplevel(self.root)
+        progress = ProgressWindow(progress_window, on_complete=self._analysis_complete)
+
+        # Start analysis
+        progress.start_analysis(self._perform_analysis, progress)
+
+    def _perform_analysis(self, progress):
+        """Perform the actual analysis with progress reporting."""
+        try:
+            progress.add_log_message("Starting FIT detector ageing analysis...")
+            progress.update_progress(10, "Parsing data files...")
+
+            # Step 1: Parse data for all datasets
+            for i, dataset in enumerate(self.config.datasets):
+                progress.add_log_message(f"Parsing data for dataset {dataset.date}...")
+                parser = DataParser(dataset)
+                parser.process_all_files()
+                progress.update_progress(
+                    10 + (i + 1) * 15, f"Parsed dataset {dataset.date}"
+                )
+
+            progress.update_progress(40, "Fitting Gaussian distributions...")
+
+            # Step 2: Fit Gaussians for all datasets
+            for i, dataset in enumerate(self.config.datasets):
+                progress.add_log_message(
+                    f"Fitting Gaussians for dataset {dataset.date}..."
+                )
+                gaussian_service = GaussianFitService(dataset)
+                gaussian_service.process_all_modules()
+                progress.update_progress(
+                    40 + (i + 1) * 10, f"Fitted Gaussians for {dataset.date}"
+                )
+
+            progress.update_progress(60, "Calculating reference means...")
+
+            # Step 3: Calculate reference means for first dataset
+            first_dataset = self.config.datasets[0]
+            progress.add_log_message("Calculating reference means...")
+            ref_service = ReferenceChannelService(first_dataset)
+            ref_service.calculate_reference_means()
+
+            progress.update_progress(70, "Calculating ageing factors...")
+
+            # Step 4: Calculate ageing factors for all datasets
+            ref_gaussian = first_dataset.get_reference_gaussian_mean()
+            ref_weighted = first_dataset.get_reference_weighted_mean()
+
+            for i, dataset in enumerate(self.config.datasets):
+                progress.add_log_message(
+                    f"Calculating ageing factors for {dataset.date}..."
+                )
+                ageing_service = AgeingCalculationService(
+                    dataset, ref_gaussian, ref_weighted
+                )
+                ageing_service.calculate_ageing_factors()
+                progress.update_progress(
+                    70 + (i + 1) * 10, f"Calculated ageing factors for {dataset.date}"
+                )
+
+            progress.update_progress(90, "Normalizing data...")
+
+            # Step 5: Normalize data
+            progress.add_log_message("Normalizing ageing factors...")
+            normalizer = DataNormalizer(self.config)
+            normalizer.normalize_data()
+
+            progress.update_progress(100, "Analysis completed!")
+            progress.add_log_message("Analysis completed successfully!")
+
+        except Exception as e:
+            error_msg = f"Analysis failed: {str(e)}"
+            logger.error(error_msg)
+            progress.add_log_message(error_msg)
+            raise
+
+    def _analysis_complete(self):
+        """Handle analysis completion."""
+        try:
+            # Save results automatically
+            results_path = save_results(self.config)
+            self.results_path = results_path
+
+            # Display results
+            results_dict = self.config.to_dict()
+            self._display_results(results_dict)
+
+            # Load into visualization
+            self.plot_widget.load_from_json_file(results_path)
+
+            # Switch to visualization tab
+            self.notebook.select(1)
+
+            self.status_var.set("Analysis completed successfully")
+
+        except Exception as e:
+            error_msg = f"Error handling analysis completion: {str(e)}"
+            logger.error(error_msg)
+            messagebox.showerror("Error", error_msg)
+
+    def _parse_data_only(self):
+        """Parse data files only."""
+        if not self.config:
+            messagebox.showwarning("Warning", "Please load a configuration file first")
+            return
+
+        try:
+            for dataset in self.config.datasets:
+                parser = DataParser(dataset)
+                parser.process_all_files()
+
+            self._add_result_text("Data parsing completed successfully")
+            self.status_var.set("Data parsing completed")
+
+        except Exception as e:
+            error_msg = f"Data parsing failed: {str(e)}"
+            logger.error(error_msg)
+            messagebox.showerror("Error", error_msg)
+
+    def _fit_gaussians_only(self):
+        """Fit Gaussians only."""
+        if not self.config:
+            messagebox.showwarning("Warning", "Please load a configuration file first")
+            return
+
+        try:
+            for dataset in self.config.datasets:
+                gaussian_service = GaussianFitService(dataset)
+                gaussian_service.process_all_modules()
+
+            self._add_result_text("Gaussian fitting completed successfully")
+            self.status_var.set("Gaussian fitting completed")
+
+        except Exception as e:
+            error_msg = f"Gaussian fitting failed: {str(e)}"
+            logger.error(error_msg)
+            messagebox.showerror("Error", error_msg)
+
+    def _display_results(self, results_dict):
+        """Display analysis results in the results text area."""
+        self.results_text.config(state=tk.NORMAL)
+        self.results_text.delete(1.0, tk.END)
+
+        # Summary information
+        datasets = results_dict.get("datasets", [])
+        self.results_text.insert(tk.END, "Analysis Results Summary\n")
+        self.results_text.insert(tk.END, "========================\n\n")
+        self.results_text.insert(tk.END, f"Number of datasets: {len(datasets)}\n\n")
+
+        for dataset in datasets:
+            date = dataset.get("date", "unknown")
+            modules = dataset.get("modules", [])
+            self.results_text.insert(tk.END, f"Dataset: {date}\n")
+            self.results_text.insert(tk.END, f"  Modules: {len(modules)}\n")
+
+            total_channels = sum(len(m.get("channels", [])) for m in modules)
+            self.results_text.insert(tk.END, f"  Total channels: {total_channels}\n\n")
+
+        self.results_text.config(state=tk.DISABLED)
+
+    def _add_result_text(self, text):
+        """Add text to the results area."""
+        self.results_text.config(state=tk.NORMAL)
+        self.results_text.insert(tk.END, f"{text}\n")
+        self.results_text.see(tk.END)
+        self.results_text.config(state=tk.DISABLED)
+
+    def _show_about(self):
+        """Show about dialog."""
+        about_text = """
+FIT Detector Ageing Analysis Module
+
+A comprehensive tool for analyzing ageing effects in FIT detector data.
+
+Features:
+• Data parsing and preprocessing
+• Gaussian fitting and statistical analysis
+• Reference channel calculations
+• Ageing factor computation and normalization
+• Interactive visualization and plotting
+
+Version: 1.0.0
+"""
+        messagebox.showinfo("About", about_text)
+
     def _on_closing(self):
         """Handle window closing."""
         logger.info("AgeingAnalysis application closing")
@@ -188,29 +514,29 @@ class AgeingAnalysisApp:
             self.root.destroy()
         if self.is_standalone:
             sys.exit(0)
-    
+
     def run(self):
         """Run the application."""
         try:
             logger.info("Starting AgeingAnalysis application...")
-            
+
             # Create GUI
             self._create_gui()
-            
+
             # Start main loop
             if self.is_standalone:
                 self.root.mainloop()
             else:
                 # For integration with launcher, just show the window
                 self.root.focus_set()
-                
+
         except Exception as e:
             logger.error(f"Error running AgeingAnalysis application: {e}")
             raise
 
 
 def main():
-    """Main entry point for standalone execution."""
+    """Execute the application in standalone mode."""
     try:
         app = AgeingAnalysisApp()
         app.run()
@@ -222,4 +548,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

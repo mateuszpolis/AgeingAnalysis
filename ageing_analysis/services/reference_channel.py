@@ -1,29 +1,30 @@
+"""Reference channel service for FIT detector ageing analysis."""
+
+import logging
 import math
 
-from configs.logger_config import logger
-from fit_detector.apps.ageing.entities.dataset import Dataset
+logger = logging.getLogger(__name__)
 
 
 class ReferenceChannelService:
-    """A class to calculate reference Gaussian and weighted means across reference channels."""
+    """Calculate reference Gaussian and weighted means across reference channels."""
 
-    def __init__(self, dataset: Dataset):
+    def __init__(self, dataset):
         """Initialize the service with the reference module.
 
         Args:
-            dataset (Dataset): The dataset containing the reference module.
+            dataset: The dataset containing the reference module.
         """
         self.dataset = dataset
         self.reference_module = dataset.get_reference_module()
 
     def calculate_reference_means(self):
-        """Calculate the reference Gaussian and weighted means across reference channels.
+        """Calculate the reference means across reference channels.
 
         Raises:
-            ValueError: If the reference channels contain insufficient data for calculation.
+            ValueError: If the reference channels contain insufficient data.
             ValueError: If the reference channels contain no data for calculation.
         """
-
         logger.debug("Calculating reference Gaussian and weighted means...")
 
         gaussian_means = []
@@ -41,7 +42,9 @@ class ReferenceChannelService:
                 or isinstance(weighted_mean, float)
                 and math.isnan(weighted_mean)
             ):
-                logger.warning(f"Reference channel: {channel} contains None or NaN values.")
+                logger.warning(
+                    f"Reference channel: {channel} contains None or NaN values."
+                )
                 continue
             gaussian_means.append(gaussian_mean)
             weighted_means.append(weighted_mean)
@@ -50,7 +53,8 @@ class ReferenceChannelService:
         if len(gaussian_means) != len(weighted_means):
             raise ValueError(
                 f"Reference channels contain insufficient data for calculation. "
-                f"Gaussian means: {len(gaussian_means)}, Weighted means: {len(weighted_means)}"
+                f"Gaussian means: {len(gaussian_means)}, "
+                f"Weighted means: {len(weighted_means)}"
             )
         elif len(gaussian_means) == 0:
             raise ValueError("Reference channels contain no data for calculation.")
@@ -65,4 +69,6 @@ class ReferenceChannelService:
             f"Reference Weighted mean: {reference_weighted_mean}"
         )
 
-        self.dataset.set_reference_means(reference_gaussian_mean, reference_weighted_mean)
+        self.dataset.set_reference_means(
+            reference_gaussian_mean, reference_weighted_mean
+        )
