@@ -67,6 +67,7 @@ docs = [
 
 [project.scripts]
 ageing-analysis = "ageing_analysis.main:main"
+ageing-analysis-gui = "ageing_analysis.main:main"
 
 [project.urls]
 Homepage = "https://github.com/your-org/AgeingAnalysis"

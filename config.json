@@ -1,0 +1,433 @@
+{
+    "inputs": [
+        {
+            "date": "2022-09-19",
+            "validateHeader": false,
+            "basePath": "0T/2022-09-19-laser",
+            "files": {
+                "PMA0": "2022-09-19-0T-charge-PMA0.csv",
+                "PMA1": "2022-09-19-0T-charge-PMA1.csv",
+                "PMA2": "2022-09-19-0T-charge-PMA2.csv",
+                "PMA3": "2022-09-19-0T-charge-PMA3.csv",
+                "PMA4": "2022-09-19-0T-charge-PMA4.csv",
+                "PMA5": "2022-09-19-0T-charge-PMA5.csv",
+                "PMA6": "2022-09-19-0T-charge-PMA6.csv",
+                "PMA7": "2022-09-19-0T-charge-PMA7.csv",
+                "PMC0": "2022-09-19-0T-charge-PMC0.csv",
+                "PMC1": "2022-09-19-0T-charge-PMC1.csv",
+                "PMC2": "2022-09-19-0T-charge-PMC2.csv",
+                "PMC3": "2022-09-19-0T-charge-PMC3.csv",
+                "PMC4": "2022-09-19-0T-charge-PMC4.csv",
+                "PMC5": "2022-09-19-0T-charge-PMC5.csv",
+                "PMC6": "2022-09-19-0T-charge-PMC6.csv",
+                "PMC7": "2022-09-19-0T-charge-PMC7.csv",
+                "PMC8": "2022-09-19-0T-charge-PMC8.csv",
+                "PMC9": "2022-09-19-0T-charge-PMC9.csv"
+            },
+            "refCH": {
+                "PM": "PMC9",
+                "CH": [
+                    5,
+                    7,
+                    8
+                ]
+            }
+        },
+        {
+            "date": "2022-10-12",
+            "validateHeader": false,
+            "basePath": "0T/2022-10-12-laser",
+            "files": {
+                "PMA0": "2022-10-12-0T-charge-PMA0.csv",
+                "PMA1": "2022-10-12-0T-charge-PMA1.csv",
+                "PMA2": "2022-10-12-0T-charge-PMA2.csv",
+                "PMA3": "2022-10-12-0T-charge-PMA3.csv",
+                "PMA4": "2022-10-12-0T-charge-PMA4.csv",
+                "PMA5": "2022-10-12-0T-charge-PMA5.csv",
+                "PMA6": "2022-10-12-0T-charge-PMA6.csv",
+                "PMA7": "2022-10-12-0T-charge-PMA7.csv",
+                "PMC0": "2022-10-12-0T-charge-PMC0.csv",
+                "PMC1": "2022-10-12-0T-charge-PMC1.csv",
+                "PMC2": "2022-10-12-0T-charge-PMC2.csv",
+                "PMC3": "2022-10-12-0T-charge-PMC3.csv",
+                "PMC4": "2022-10-12-0T-charge-PMC4.csv",
+                "PMC5": "2022-10-12-0T-charge-PMC5.csv",
+                "PMC6": "2022-10-12-0T-charge-PMC6.csv",
+                "PMC7": "2022-10-12-0T-charge-PMC7.csv",
+                "PMC8": "2022-10-12-0T-charge-PMC8.csv",
+                "PMC9": "2022-10-12-0T-charge-PMC9.csv"
+            },
+            "refCH": {
+                "PM": "PMC9",
+                "CH": [
+                    5,
+                    7,
+                    8
+                ]
+            }
+        },
+        {
+            "date": "2022-10-26",
+            "validateHeader": false,
+            "basePath": "0T/2022-10-26-laser",
+            "files": {
+                "PMA0": "2022-10-26-0T-charge-PMA0.csv",
+                "PMA1": "2022-10-26-0T-charge-PMA1.csv",
+                "PMA2": "2022-10-26-0T-charge-PMA2.csv",
+                "PMA3": "2022-10-26-0T-charge-PMA3.csv",
+                "PMA4": "2022-10-26-0T-charge-PMA4.csv",
+                "PMA5": "2022-10-26-0T-charge-PMA5.csv",
+                "PMA6": "2022-10-26-0T-charge-PMA6.csv",
+                "PMA7": "2022-10-26-0T-charge-PMA7.csv",
+                "PMC0": "2022-10-26-0T-charge-PMC0.csv",
+                "PMC1": "2022-10-26-0T-charge-PMC1.csv",
+                "PMC2": "2022-10-26-0T-charge-PMC2.csv",
+                "PMC3": "2022-10-26-0T-charge-PMC3.csv",
+                "PMC4": "2022-10-26-0T-charge-PMC4.csv",
+                "PMC5": "2022-10-26-0T-charge-PMC5.csv",
+                "PMC6": "2022-10-26-0T-charge-PMC6.csv",
+                "PMC7": "2022-10-26-0T-charge-PMC7.csv",
+                "PMC8": "2022-10-26-0T-charge-PMC8.csv",
+                "PMC9": "2022-10-26-0T-charge-PMC9.csv"
+            },
+            "refCH": {
+                "PM": "PMC9",
+                "CH": [
+                    5,
+                    7,
+                    8
+                ]
+            }
+        },
+        {
+            "date": "2022-11-23",
+            "validateHeader": false,
+            "basePath": "0T/2022-11-23-r0 - 0T HV, 0T CS",
+            "files": {
+                "PMA0": "2022-11-23-0T-charge-PMA0.csv",
+                "PMA1": "2022-11-23-0T-charge-PMA1.csv",
+                "PMA2": "2022-11-23-0T-charge-PMA2.csv",
+                "PMA3": "2022-11-23-0T-charge-PMA3.csv",
+                "PMA4": "2022-11-23-0T-charge-PMA4.csv",
+                "PMA5": "2022-11-23-0T-charge-PMA5.csv",
+                "PMA6": "2022-11-23-0T-charge-PMA6.csv",
+                "PMA7": "2022-11-23-0T-charge-PMA7.csv",
+                "PMC0": "2022-11-23-0T-charge-PMC0.csv",
+                "PMC1": "2022-11-23-0T-charge-PMC1.csv",
+                "PMC2": "2022-11-23-0T-charge-PMC2.csv",
+                "PMC3": "2022-11-23-0T-charge-PMC3.csv",
+                "PMC4": "2022-11-23-0T-charge-PMC4.csv",
+                "PMC5": "2022-11-23-0T-charge-PMC5.csv",
+                "PMC6": "2022-11-23-0T-charge-PMC6.csv",
+                "PMC7": "2022-11-23-0T-charge-PMC7.csv",
+                "PMC8": "2022-11-23-0T-charge-PMC8.csv",
+                "PMC9": "2022-11-23-0T-charge-PMC9.csv"
+            },
+            "refCH": {
+                "PM": "PMC9",
+                "CH": [
+                    5,
+                    7,
+                    8
+                ]
+            }
+        },
+        {
+            "date": "2023-04-19",
+            "validateHeader": false,
+            "basePath": "0T/2023-04-19-0T-gain-scan/2023-04-19-0T-gain-scan-r3-0V",
+            "files": {
+                "PMA0": "2023-04-19-0T-gain-scan-r3-0V-charge-PMA0.csv",
+                "PMA1": "2023-04-19-0T-gain-scan-r3-0V-charge-PMA1.csv",
+                "PMA2": "2023-04-19-0T-gain-scan-r3-0V-charge-PMA2.csv",
+                "PMA3": "2023-04-19-0T-gain-scan-r3-0V-charge-PMA3.csv",
+                "PMA4": "2023-04-19-0T-gain-scan-r3-0V-charge-PMA4.csv",
+                "PMA5": "2023-04-19-0T-gain-scan-r3-0V-charge-PMA5.csv",
+                "PMA6": "2023-04-19-0T-gain-scan-r3-0V-charge-PMA6.csv",
+                "PMA7": "2023-04-19-0T-gain-scan-r3-0V-charge-PMA7.csv",
+                "PMC0": "2023-04-19-0T-gain-scan-r3-0V-charge-PMC0.csv",
+                "PMC1": "2023-04-19-0T-gain-scan-r3-0V-charge-PMC1.csv",
+                "PMC2": "2023-04-19-0T-gain-scan-r3-0V-charge-PMC2.csv",
+                "PMC3": "2023-04-19-0T-gain-scan-r3-0V-charge-PMC3.csv",
+                "PMC4": "2023-04-19-0T-gain-scan-r3-0V-charge-PMC4.csv",
+                "PMC5": "2023-04-19-0T-gain-scan-r3-0V-charge-PMC5.csv",
+                "PMC6": "2023-04-19-0T-gain-scan-r3-0V-charge-PMC6.csv",
+                "PMC7": "2023-04-19-0T-gain-scan-r3-0V-charge-PMC7.csv",
+                "PMC8": "2023-04-19-0T-gain-scan-r3-0V-charge-PMC8.csv",
+                "PMC9": "2023-04-19-0T-gain-scan-r3-0V-charge-PMC9.csv"
+            },
+            "refCH": {
+                "PM": "PMC9",
+                "CH": [
+                    5,
+                    7,
+                    8
+                ]
+            }
+        },
+        {
+            "date": "2023-05-31",
+            "validateHeader": false,
+            "basePath": "0T/2023-05-31-0T-r2",
+            "files": {
+                "PMA0": "2023-05-31-0T-r2-PMA0.csv",
+                "PMA1": "2023-05-31-0T-r2-PMA1.csv",
+                "PMA2": "2023-05-31-0T-r2-PMA2.csv",
+                "PMA3": "2023-05-31-0T-r2-PMA3.csv",
+                "PMA4": "2023-05-31-0T-r2-PMA4.csv",
+                "PMA5": "2023-05-31-0T-r2-PMA5.csv",
+                "PMA6": "2023-05-31-0T-r2-PMA6.csv",
+                "PMA7": "2023-05-31-0T-r2-PMA7.csv",
+                "PMC0": "2023-05-31-0T-r2-PMC0.csv",
+                "PMC1": "2023-05-31-0T-r2-PMC1.csv",
+                "PMC2": "2023-05-31-0T-r2-PMC2.csv",
+                "PMC3": "2023-05-31-0T-r2-PMC3.csv",
+                "PMC4": "2023-05-31-0T-r2-PMC4.csv",
+                "PMC5": "2023-05-31-0T-r2-PMC5.csv",
+                "PMC6": "2023-05-31-0T-r2-PMC6.csv",
+                "PMC7": "2023-05-31-0T-r2-PMC7.csv",
+                "PMC8": "2023-05-31-0T-r2-PMC8.csv",
+                "PMC9": "2023-05-31-0T-r2-PMC9.csv"
+            },
+            "refCH": {
+                "PM": "PMC9",
+                "CH": [
+                    5,
+                    7,
+                    8
+                ]
+            }
+        },
+        {
+            "date": "2023-06-21",
+            "validateHeader": false,
+            "basePath": "0T/2023-06-21-0T-r2",
+            "files": {
+                "PMA0": "2023-06-21-0T-r2-PMA0.csv",
+                "PMA1": "2023-06-21-0T-r2-PMA1.csv",
+                "PMA2": "2023-06-21-0T-r2-PMA2.csv",
+                "PMA3": "2023-06-21-0T-r2-PMA3.csv",
+                "PMA4": "2023-06-21-0T-r2-PMA4.csv",
+                "PMA5": "2023-06-21-0T-r2-PMA5.csv",
+                "PMA6": "2023-06-21-0T-r2-PMA6.csv",
+                "PMA7": "2023-06-21-0T-r2-PMA7.csv",
+                "PMC0": "2023-06-21-0T-r2-PMC0.csv",
+                "PMC1": "2023-06-21-0T-r2-PMC1.csv",
+                "PMC2": "2023-06-21-0T-r2-PMC2.csv",
+                "PMC3": "2023-06-21-0T-r2-PMC3.csv",
+                "PMC4": "2023-06-21-0T-r2-PMC4.csv",
+                "PMC5": "2023-06-21-0T-r2-PMC5.csv",
+                "PMC6": "2023-06-21-0T-r2-PMC6.csv",
+                "PMC7": "2023-06-21-0T-r2-PMC7.csv",
+                "PMC8": "2023-06-21-0T-r2-PMC8.csv",
+                "PMC9": "2023-06-21-0T-r2-PMC9.csv"
+            },
+            "refCH": {
+                "PM": "PMC9",
+                "CH": [
+                    5,
+                    7,
+                    8
+                ]
+            }
+        },
+        {
+            "date": "2023-07-27",
+            "validateHeader": false,
+            "basePath": "0T/2023-07-27-0T-r2",
+            "files": {
+                "PMA0": "2023-07-27-0T-r2-PMA0.csv",
+                "PMA1": "2023-07-27-0T-r2-PMA1.csv",
+                "PMA2": "2023-07-27-0T-r2-PMA2.csv",
+                "PMA3": "2023-07-27-0T-r2-PMA3.csv",
+                "PMA4": "2023-07-27-0T-r2-PMA4.csv",
+                "PMA5": "2023-07-27-0T-r2-PMA5.csv",
+                "PMA6": "2023-07-27-0T-r2-PMA6.csv",
+                "PMA7": "2023-07-27-0T-r2-PMA7.csv",
+                "PMC0": "2023-07-27-0T-r2-PMC0.csv",
+                "PMC1": "2023-07-27-0T-r2-PMC1.csv",
+                "PMC2": "2023-07-27-0T-r2-PMC2.csv",
+                "PMC3": "2023-07-27-0T-r2-PMC3.csv",
+                "PMC4": "2023-07-27-0T-r2-PMC4.csv",
+                "PMC5": "2023-07-27-0T-r2-PMC5.csv",
+                "PMC6": "2023-07-27-0T-r2-PMC6.csv",
+                "PMC7": "2023-07-27-0T-r2-PMC7.csv",
+                "PMC8": "2023-07-27-0T-r2-PMC8.csv",
+                "PMC9": "2023-07-27-0T-r2-PMC9.csv"
+            },
+            "refCH": {
+                "PM": "PMC9",
+                "CH": [
+                    5,
+                    7,
+                    8
+                ]
+            }
+        },
+        {
+            "date": "2023-08-18",
+            "validateHeader": false,
+            "basePath": "0T/2023-08-18-0T-r2",
+            "files": {
+                "PMA0": "2023-08-18-0T-r2-PMA0.csv",
+                "PMA1": "2023-08-18-0T-r2-PMA1.csv",
+                "PMA2": "2023-08-18-0T-r2-PMA2.csv",
+                "PMA3": "2023-08-18-0T-r2-PMA3.csv",
+                "PMA4": "2023-08-18-0T-r2-PMA4.csv",
+                "PMA5": "2023-08-18-0T-r2-PMA5.csv",
+                "PMA6": "2023-08-18-0T-r2-PMA6.csv",
+                "PMA7": "2023-08-18-0T-r2-PMA7.csv",
+                "PMC0": "2023-08-18-0T-r2-PMC0.csv",
+                "PMC1": "2023-08-18-0T-r2-PMC1.csv",
+                "PMC2": "2023-08-18-0T-r2-PMC2.csv",
+                "PMC3": "2023-08-18-0T-r2-PMC3.csv",
+                "PMC4": "2023-08-18-0T-r2-PMC4.csv",
+                "PMC5": "2023-08-18-0T-r2-PMC5.csv",
+                "PMC6": "2023-08-18-0T-r2-PMC6.csv",
+                "PMC7": "2023-08-18-0T-r2-PMC7.csv",
+                "PMC8": "2023-08-18-0T-r2-PMC8.csv",
+                "PMC9": "2023-08-18-0T-r2-PMC9.csv"
+            },
+            "refCH": {
+                "PM": "PMC9",
+                "CH": [
+                    5,
+                    7,
+                    8
+                ]
+            }
+        },
+        {
+            "date": "2023-10-07",
+            "validateHeader": false,
+            "basePath": "0T/2023-10-07-0T-r2",
+            "files": {
+                "PMA0": "2023-10-07-0T-r2-PMA0.csv",
+                "PMA1": "2023-10-07-0T-r2-PMA1.csv",
+                "PMA2": "2023-10-07-0T-r2-PMA2.csv",
+                "PMA3": "2023-10-07-0T-r2-PMA3.csv",
+                "PMA4": "2023-10-07-0T-r2-PMA4.csv",
+                "PMA5": "2023-10-07-0T-r2-PMA5.csv",
+                "PMA6": "2023-10-07-0T-r2-PMA6.csv",
+                "PMA7": "2023-10-07-0T-r2-PMA7.csv",
+                "PMC0": "2023-10-07-0T-r2-PMC0.csv",
+                "PMC1": "2023-10-07-0T-r2-PMC1.csv",
+                "PMC2": "2023-10-07-0T-r2-PMC2.csv",
+                "PMC3": "2023-10-07-0T-r2-PMC3.csv",
+                "PMC4": "2023-10-07-0T-r2-PMC4.csv",
+                "PMC5": "2023-10-07-0T-r2-PMC5.csv",
+                "PMC6": "2023-10-07-0T-r2-PMC6.csv",
+                "PMC7": "2023-10-07-0T-r2-PMC7.csv",
+                "PMC8": "2023-10-07-0T-r2-PMC8.csv",
+                "PMC9": "2023-10-07-0T-r2-PMC9.csv"
+            },
+            "refCH": {
+                "PM": "PMC9",
+                "CH": [
+                    5,
+                    7,
+                    8
+                ]
+            }
+        },
+        {
+            "date": "2023-10-13",
+            "validateHeader": false,
+            "basePath": "0T/2023-10-13-0T-r2",
+            "files": {
+                "PMA0": "2023-10-13-0T-r2-PMA0.csv",
+                "PMA1": "2023-10-13-0T-r2-PMA1.csv",
+                "PMA2": "2023-10-13-0T-r2-PMA2.csv",
+                "PMA3": "2023-10-13-0T-r2-PMA3.csv",
+                "PMA4": "2023-10-13-0T-r2-PMA4.csv",
+                "PMA5": "2023-10-13-0T-r2-PMA5.csv",
+                "PMA6": "2023-10-13-0T-r2-PMA6.csv",
+                "PMA7": "2023-10-13-0T-r2-PMA7.csv",
+                "PMC0": "2023-10-13-0T-r2-PMC0.csv",
+                "PMC1": "2023-10-13-0T-r2-PMC1.csv",
+                "PMC2": "2023-10-13-0T-r2-PMC2.csv",
+                "PMC3": "2023-10-13-0T-r2-PMC3.csv",
+                "PMC4": "2023-10-13-0T-r2-PMC4.csv",
+                "PMC5": "2023-10-13-0T-r2-PMC5.csv",
+                "PMC6": "2023-10-13-0T-r2-PMC6.csv",
+                "PMC7": "2023-10-13-0T-r2-PMC7.csv",
+                "PMC8": "2023-10-13-0T-r2-PMC8.csv",
+                "PMC9": "2023-10-13-0T-r2-PMC9.csv"
+            },
+            "refCH": {
+                "PM": "PMC9",
+                "CH": [
+                    5,
+                    7,
+                    8
+                ]
+            }
+        },
+        {
+            "date": "2024-05-31",
+            "validateHeader": false,
+            "basePath": "0T/2024-05-31-0T",
+            "files": {
+                "PMA0": "2024-05-31-0T-r3-PMA0.csv",
+                "PMA1": "2024-05-31-0T-r3-PMA1.csv",
+                "PMA2": "2024-05-31-0T-r3-PMA2.csv",
+                "PMA3": "2024-05-31-0T-r3-PMA3.csv",
+                "PMA4": "2024-05-31-0T-r3-PMA4.csv",
+                "PMA5": "2024-05-31-0T-r3-PMA5.csv",
+                "PMA6": "2024-05-31-0T-r3-PMA6.csv",
+                "PMA7": "2024-05-31-0T-r3-PMA7.csv",
+                "PMC0": "2024-05-31-0T-r3-PMC0.csv",
+                "PMC1": "2024-05-31-0T-r3-PMC1.csv",
+                "PMC2": "2024-05-31-0T-r3-PMC2.csv",
+                "PMC3": "2024-05-31-0T-r3-PMC3.csv",
+                "PMC4": "2024-05-31-0T-r3-PMC4.csv",
+                "PMC5": "2024-05-31-0T-r3-PMC5.csv",
+                "PMC6": "2024-05-31-0T-r3-PMC6.csv",
+                "PMC7": "2024-05-31-0T-r3-PMC7.csv",
+                "PMC8": "2024-05-31-0T-r3-PMC8.csv",
+                "PMC9": "2024-05-31-0T-r3-PMC9.csv"
+            },
+            "refCH": {
+                "PM": "PMC9",
+                "CH": [
+                    5,
+                    7,
+                    8
+                ]
+            }
+        },
+        {
+            "date": "2022-06-01",
+            "validateHeader": false,
+            "basePath": "0T/2022-06-01-0.0T-v1",
+            "files": {
+                "PMA0": "2022-06-01-0.0T-v1-PMA0.csv",
+                "PMA1": "2022-06-01-0.0T-v1-PMA1.csv",
+                "PMA2": "2022-06-01-0.0T-v1-PMA2.csv",
+                "PMA3": "2022-06-01-0.0T-v1-PMA3.csv",
+                "PMA4": "2022-06-01-0.0T-v1-PMA4.csv",
+                "PMA5": "2022-06-01-0.0T-v1-PMA5.csv",
+                "PMA6": "2022-06-01-0.0T-v1-PMA6.csv",
+                "PMA7": "2022-06-01-0.0T-v1-PMA7.csv",
+                "PMC0": "2022-06-01-0.0T-v1-PMC0.csv",
+                "PMC1": "2022-06-01-0.0T-v1-PMC1.csv",
+                "PMC2": "2022-06-01-0.0T-v1-PMC2.csv",
+                "PMC3": "2022-06-01-0.0T-v1-PMC3.csv",
+                "PMC4": "2022-06-01-0.0T-v1-PMC4.csv",
+                "PMC5": "2022-06-01-0.0T-v1-PMC5.csv",
+                "PMC6": "2022-06-01-0.0T-v1-PMC6.csv",
+                "PMC7": "2022-06-01-0.0T-v1-PMC7.csv",
+                "PMC8": "2022-06-01-0.0T-v1-PMC8.csv",
+                "PMC9": "2022-06-01-0.0T-v1-PMC9.csv"
+            },
+            "refCH": {
+                "PM": "PMC9",
+                "CH": [
+                    5,
+                    7,
+                    8
+                ]
+            }
+        }
+    ]
+}

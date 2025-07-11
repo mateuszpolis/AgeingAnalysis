@@ -5,6 +5,7 @@ This module provides a complete ageing analysis pipeline for FIT detector data,
 including data processing, statistical analysis, and interactive visualization.
 """
 
+import argparse
 import logging
 import sys
 import tkinter as tk
@@ -32,22 +33,59 @@ logger = logging.getLogger(__name__)
 class AgeingAnalysisApp:
     """Main application class for the AgeingAnalysis module."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, headless=False, config_path=None):
         """Initialize the AgeingAnalysis application.
 
         Args:
             parent: Parent window (optional, for integration with launcher)
+            headless: If True, run without GUI (default: False)
+            config_path: Path to configuration file (optional)
         """
         self.parent = parent
         self.root = None
         self.is_standalone = parent is None
+        self.headless = headless
         self.config = None
         self.results_path = None
 
         # Module configuration
         self.module_path = Path(__file__).parent
 
-        logger.info("AgeingAnalysis application initialized")
+        # Load config if provided
+        if config_path:
+            self._load_config(config_path)
+
+        logger.info(f"AgeingAnalysis application initialized (headless: {headless})")
+
+    def _load_config(self, config_path):
+        """Load configuration from file.
+
+        Args:
+            config_path: Path to configuration file
+        """
+        try:
+            self.config = Config(config_path)
+            logger.info(
+                f"Configuration loaded from {config_path}: "
+                f"{len(self.config.datasets)} datasets"
+            )
+
+            if not self.headless and hasattr(self, "config_status_var"):
+                self.config_status_var.set(
+                    f"Configuration loaded: {len(self.config.datasets)} datasets"
+                )
+                self.run_analysis_btn.config(state=tk.NORMAL)
+                self._add_result_text(f"Configuration loaded from {config_path}")
+                self.status_var.set("Configuration loaded successfully")
+
+        except Exception as e:
+            error_msg = f"Failed to load configuration: {str(e)}"
+            logger.error(error_msg)
+            if not self.headless and hasattr(self, "status_var"):
+                messagebox.showerror("Error", error_msg)
+                self.status_var.set("Error loading configuration")
+            else:
+                raise
 
     def _create_gui(self):
         """Create the main GUI interface."""
@@ -216,7 +254,7 @@ class AgeingAnalysisApp:
         status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
     def _load_config_file(self):
-        """Load a configuration file."""
+        """Load a configuration file via file dialog."""
         try:
             file_path = filedialog.askopenfilename(
                 title="Load Configuration File",
@@ -224,13 +262,7 @@ class AgeingAnalysisApp:
             )
 
             if file_path:
-                self.config = Config(file_path)
-                self.config_status_var.set(
-                    f"Configuration loaded: {len(self.config.datasets)} datasets"
-                )
-                self.run_analysis_btn.config(state=tk.NORMAL)
-                self._add_result_text(f"Configuration loaded from {file_path}")
-                self.status_var.set("Configuration loaded successfully")
+                self._load_config(file_path)
 
         except Exception as e:
             error_msg = f"Failed to load configuration: {str(e)}"
@@ -398,6 +430,136 @@ class AgeingAnalysisApp:
             progress.add_log_message(error_msg)
             raise
 
+    def run_headless_analysis(self, output_path=None):
+        """Run analysis in headless mode without GUI.
+
+        Args:
+            output_path: Optional path to save results (default: auto-generated)
+
+        Returns:
+            str: Path to the saved results file
+        """
+        if not self.config:
+            raise ValueError("No configuration loaded. Please provide a config file.")
+
+        if not self.config.datasets:
+            raise ValueError(
+                "No valid datasets found in configuration. "
+                "Please check your config file and data paths."
+            )
+
+        logger.info("Starting headless analysis...")
+
+        try:
+            # Step 1: Parse data for all datasets
+            logger.info("Parsing data files...")
+            for i, dataset in enumerate(self.config.datasets):
+                logger.info(f"Parsing data for dataset {dataset.date}...")
+                parser = DataParser(dataset)
+                parser.process_all_files()
+                logger.info(
+                    f"Parsed dataset {dataset.date} ({i+1}/{len(self.config.datasets)})"
+                )
+
+            # Step 2: Fit Gaussians for all datasets
+            logger.info("Fitting Gaussian distributions...")
+            for i, dataset in enumerate(self.config.datasets):
+                logger.info(f"Fitting Gaussians for dataset {dataset.date}...")
+                gaussian_service = GaussianFitService(dataset)
+                gaussian_service.process_all_modules()
+                logger.info(
+                    f"Fitted Gaussians for {dataset.date} "
+                    f"({i+1}/{len(self.config.datasets)})"
+                )
+
+            # Step 3: Calculate reference means for first dataset
+            logger.info("Calculating reference means...")
+            first_dataset = self.config.datasets[0]
+            ref_service = ReferenceChannelService(first_dataset)
+            ref_service.calculate_reference_means()
+            logger.info("Reference means calculated")
+
+            # Step 4: Calculate ageing factors for all datasets
+            logger.info("Calculating ageing factors...")
+            ref_gaussian = first_dataset.get_reference_gaussian_mean()
+            ref_weighted = first_dataset.get_reference_weighted_mean()
+
+            for i, dataset in enumerate(self.config.datasets):
+                logger.info(f"Calculating ageing factors for {dataset.date}...")
+                ageing_service = AgeingCalculationService(
+                    dataset, ref_gaussian, ref_weighted
+                )
+                ageing_service.calculate_ageing_factors()
+                logger.info(
+                    f"Calculated ageing factors for {dataset.date} "
+                    f"({i+1}/{len(self.config.datasets)})"
+                )
+
+            # Step 5: Normalize data
+            logger.info("Normalizing ageing factors...")
+            normalizer = DataNormalizer(self.config)
+            normalizer.normalize_data()
+            logger.info("Data normalization completed")
+
+            # Step 6: Save results
+            logger.info("Saving results...")
+            results_path = save_results(self.config, output_path)
+            self.results_path = results_path
+            logger.info(f"Results saved to: {results_path}")
+
+            # Step 7: Print summary
+            self._print_analysis_summary()
+
+            logger.info("Headless analysis completed successfully!")
+            return results_path
+
+        except Exception as e:
+            error_msg = f"Headless analysis failed: {str(e)}"
+            logger.error(error_msg)
+            raise
+
+    def _print_analysis_summary(self):
+        """Print analysis summary to console."""
+        if not self.config:
+            return
+
+        print("\n" + "=" * 60)
+        print("ANALYSIS RESULTS SUMMARY")
+        print("=" * 60)
+
+        datasets = self.config.datasets
+        print(f"Number of datasets processed: {len(datasets)}")
+
+        for i, dataset in enumerate(datasets):
+            print(f"\nDataset {i+1}: {dataset.date}")
+            print(f"  Modules: {len(dataset.modules)}")
+
+            total_channels = sum(len(module.channels) for module in dataset.modules)
+            print(f"  Total channels: {total_channels}")
+
+            # Print some statistics if available
+            if dataset.modules:
+                module = dataset.modules[0]
+                if module.channels:
+                    channel = module.channels[0]
+                    if (
+                        hasattr(channel, "ageing_factor")
+                        and channel.ageing_factor is not None
+                    ):
+                        ageing_factors = [
+                            ch.ageing_factor
+                            for mod in dataset.modules
+                            for ch in mod.channels
+                            if hasattr(ch, "ageing_factor")
+                            and ch.ageing_factor is not None
+                        ]
+                        if ageing_factors:
+                            avg_ageing = sum(ageing_factors) / len(ageing_factors)
+                            print(f"  Average ageing factor: {avg_ageing: .4f}")
+
+        print(f"\nResults saved to: {self.results_path}")
+        print("=" * 60)
+
     def _analysis_complete(self):
         """Handle analysis completion."""
         try:
@@ -515,20 +677,28 @@ Version: 1.0.0
         if self.is_standalone:
             sys.exit(0)
 
-    def run(self):
-        """Run the application."""
+    def run(self, output_path=None):
+        """Run the application.
+
+        Args:
+            output_path: Optional path to save results (for headless mode)
+        """
         try:
             logger.info("Starting AgeingAnalysis application...")
 
-            # Create GUI
-            self._create_gui()
-
-            # Start main loop
-            if self.is_standalone:
-                self.root.mainloop()
+            if self.headless:
+                # Run in headless mode
+                return self.run_headless_analysis(output_path)
             else:
-                # For integration with launcher, just show the window
-                self.root.focus_set()
+                # Create GUI
+                self._create_gui()
+
+                # Start main loop
+                if self.is_standalone:
+                    self.root.mainloop()
+                else:
+                    # For integration with launcher, just show the window
+                    self.root.focus_set()
 
         except Exception as e:
             logger.error(f"Error running AgeingAnalysis application: {e}")
@@ -537,9 +707,64 @@ Version: 1.0.0
 
 def main():
     """Execute the application in standalone mode."""
+    parser = argparse.ArgumentParser(
+        description="FIT Detector Ageing Analysis Tool",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Run with GUI (default)
+  python -m ageing_analysis.main
+
+  # Run headless analysis with config file
+  python -m ageing_analysis.main --headless --config config.json
+
+  # Run headless analysis with custom output path
+  python -m ageing_analysis.main --headless --config config.json --output results.json
+        """,
+    )
+
+    parser.add_argument(
+        "--headless", action="store_true", help="Run without GUI (headless mode)"
+    )
+
+    parser.add_argument(
+        "--config",
+        "-c",
+        type=str,
+        help="Path to configuration file (required for headless mode)",
+    )
+
+    parser.add_argument(
+        "--output",
+        "-o",
+        type=str,
+        help="Output path for results (optional, auto-generated if not provided)",
+    )
+
+    parser.add_argument(
+        "--verbose", "-v", action="store_true", help="Enable verbose logging"
+    )
+
+    args = parser.parse_args()
+
+    # Set up logging level
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    # Validate arguments
+    if args.headless and not args.config:
+        parser.error("--config is required when running in headless mode")
+
     try:
-        app = AgeingAnalysisApp()
-        app.run()
+        app = AgeingAnalysisApp(headless=args.headless, config_path=args.config)
+
+        if args.headless:
+            result_path = app.run(output_path=args.output)
+            print("\nAnalysis completed successfully!")
+            print(f"Results saved to: {result_path}")
+        else:
+            app.run()
+
     except KeyboardInterrupt:
         logger.info("Application interrupted by user")
     except Exception as e:
