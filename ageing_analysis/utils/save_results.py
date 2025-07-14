@@ -23,7 +23,9 @@ def save_results(config, output_path: str = None) -> str:
         # Generate default filename if not provided
         if output_path is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_path = f"ageing_analysis_results_{timestamp}.json"
+            output_path = (
+                f"ageing_analysis_results/ageing_analysis_results_{timestamp}.json"
+            )
 
         # Ensure the output directory exists
         output_file = Path(output_path)
@@ -89,7 +91,9 @@ def export_results_csv(results: Dict[str, Any], output_path: str = None) -> str:
         # Generate default filename if not provided
         if output_path is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_path = f"ageing_analysis_results_{timestamp}.csv"
+            output_path = (
+                f"ageing_analysis_results/ageing_analysis_results_{timestamp}.csv"
+            )
 
         # Flatten the results for CSV export
         flattened_data = []

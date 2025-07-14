@@ -180,6 +180,7 @@ Thumbs.db
 data/
 outputs/
 temp/
+ageing_analysis_results/
 .env.local
 .env.*.local
 
