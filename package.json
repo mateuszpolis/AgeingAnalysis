@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/AgeingAnalysis.git"
+    "url": "https://github.com/mateuszpolis/AgeingAnalysis.git"
   },
   "keywords": [
     "physics",
@@ -18,7 +18,7 @@
     "fit",
     "cern"
   ],
-  "author": "Your Name",
+  "author": "Mateusz Polis",
   "license": "MIT",
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",
