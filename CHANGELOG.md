@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.0.4...v1.1.0) (2025-07-14)
+
+
+### Features
+
+* add Ageing Visualization Window for enhanced data analysis ([9875927](https://github.com/mateuszpolis/AgeingAnalysis/commit/98759271783a143278cbbb5830705525bcc84f10))
+
 ## [1.0.4](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.0.3...v1.0.4) (2025-07-14)
 
 
