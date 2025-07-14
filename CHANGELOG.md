@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.0.0...v1.0.1) (2025-07-14)
+
+
+### Bug Fixes
+
+* resolve code quality issues for CI/CD pipeline ([8bd9976](https://github.com/mateuszpolis/AgeingAnalysis/commit/8bd9976aea136fca0fbefceb69f8691ad099a4d5))
+
 # 1.0.0 (2025-07-14)
 
 
