@@ -5,6 +5,7 @@ for the ageing analysis process.
 """
 
 from .ageing_calculator import AgeingCalculationService
+from .config_manager import ConfigManager
 from .data_normalizer import DataNormalizer
 from .data_parser import DataParser
 from .gaussian_fit import GaussianFitService
@@ -16,4 +17,5 @@ __all__ = [
     "AgeingCalculationService",
     "ReferenceChannelService",
     "DataNormalizer",
+    "ConfigManager",
 ]

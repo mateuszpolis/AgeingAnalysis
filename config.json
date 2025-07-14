@@ -429,6 +429,39 @@
                     8
                 ]
             }
+        },
+        {
+            "date": "2022-03-20",
+            "validateHeader": false,
+            "basePath": "0T/2022-03-20-00T",
+            "files": {
+                "PMA0": "2023-03-20-PMA0.csv",
+                "PMA1": "2023-03-20-PMA1.csv",
+                "PMA2": "2023-03-20-PMA2.csv",
+                "PMA3": "2023-03-20-PMA3.csv",
+                "PMA4": "2023-03-20-PMA4.csv",
+                "PMA5": "2023-03-20-PMA5.csv",
+                "PMA6": "2023-03-20-PMA6.csv",
+                "PMA7": "2023-03-20-PMA7.csv",
+                "PMC0": "2023-03-20-PMC0.csv",
+                "PMC1": "2023-03-20-PMC1.csv",
+                "PMC2": "2023-03-20-PMC2.csv",
+                "PMC3": "2023-03-20-PMC3.csv",
+                "PMC4": "2023-03-20-PMC4.csv",
+                "PMC5": "2023-03-20-PMC5.csv",
+                "PMC6": "2023-03-20-PMC6.csv",
+                "PMC7": "2023-03-20-PMC7.csv",
+                "PMC8": "2023-03-20-PMC8.csv",
+                "PMC9": "2023-03-20-PMC9.csv"
+            },
+            "refCH": {
+                "PM": "PMC9",
+                "CH": [
+                    5,
+                    7,
+                    8
+                ]
+            }
         }
     ]
 }

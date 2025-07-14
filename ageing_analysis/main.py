@@ -10,10 +10,10 @@ import logging
 import sys
 import tkinter as tk
 from pathlib import Path
-from tkinter import filedialog, messagebox, ttk
+from tkinter import TclError, filedialog, messagebox, ttk
 
 from .entities import Config
-from .gui import AgeingPlotWidget, ProgressWindow
+from .gui import AgeingPlotWidget, ConfigGeneratorWidget, ProgressWindow
 from .services import (
     AgeingCalculationService,
     DataNormalizer,
@@ -170,6 +170,10 @@ class AgeingAnalysisApp:
         file_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="File", menu=file_menu)
         file_menu.add_command(label="Load Config...", command=self._load_config_file)
+        file_menu.add_command(
+            label="Config Generator...", command=self._open_config_generator
+        )
+        file_menu.add_separator()
         file_menu.add_command(label="Load Results...", command=self._load_results_file)
         file_menu.add_separator()
         file_menu.add_command(label="Save Results...", command=self._save_results)
@@ -217,12 +221,23 @@ class AgeingAnalysisApp:
         config_frame = ttk.LabelFrame(main_frame, text="Configuration", padding="10")
         config_frame.pack(fill=tk.X, pady=(0, 20))
 
+        # Configuration buttons frame
+        config_buttons_frame = ttk.Frame(config_frame)
+        config_buttons_frame.pack(pady=5)
+
         ttk.Button(
-            config_frame,
+            config_buttons_frame,
             text="Load Configuration File",
             command=self._load_config_file,
             style="Large.TButton",
-        ).pack(pady=5)
+        ).pack(side=tk.LEFT, padx=(0, 10))
+
+        ttk.Button(
+            config_buttons_frame,
+            text="Config Generator",
+            command=self._open_config_generator,
+            style="Large.TButton",
+        ).pack(side=tk.LEFT)
 
         self.config_status_var = tk.StringVar(value="No configuration loaded")
         ttk.Label(config_frame, textvariable=self.config_status_var).pack(pady=5)
@@ -310,6 +325,56 @@ class AgeingAnalysisApp:
             logger.error(error_msg)
             messagebox.showerror("Error", error_msg)
             self.status_var.set("Error loading configuration")
+
+    def _open_config_generator(self):
+        """Open the configuration generator in a new window."""
+        try:
+            # Create new window for config generator
+            config_window = tk.Toplevel(self.root)
+            config_window.title("Configuration Generator")
+            config_window.geometry("1000x800")
+            config_window.minsize(800, 600)
+
+            # Center the window
+            config_window.update_idletasks()
+            x = (config_window.winfo_screenwidth() // 2) - (
+                config_window.winfo_width() // 2
+            )
+            y = (config_window.winfo_screenheight() // 2) - (
+                config_window.winfo_height() // 2
+            )
+            config_window.geometry(f"+{x}+{y}")
+
+            # Set window icon (if available)
+            if hasattr(self.root, "iconbitmap"):
+                try:
+                    config_window.iconbitmap(self.root.iconbitmap())
+                except TclError:
+                    pass  # Icon not available, continue without it
+
+            # Create the config generator widget
+            ConfigGeneratorWidget(config_window)
+
+            # Handle window closing
+            def on_config_window_close():
+                config_window.destroy()
+
+            config_window.protocol("WM_DELETE_WINDOW", on_config_window_close)
+
+            # Make window modal
+            config_window.transient(self.root)
+            config_window.grab_set()
+
+            # Focus on the new window
+            config_window.focus_set()
+
+            logger.info("Config generator window opened")
+
+        except Exception as e:
+            error_msg = f"Failed to open config generator: {str(e)}"
+            logger.error(error_msg)
+            messagebox.showerror("Error", error_msg)
+            self.status_var.set("Error opening config generator")
 
     def _load_results_file(self):
         """Load an existing results file."""
