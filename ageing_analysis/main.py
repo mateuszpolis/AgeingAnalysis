@@ -13,7 +13,7 @@ from pathlib import Path
 from tkinter import TclError, filedialog, messagebox, ttk
 
 from .entities import Config
-from .gui import AgeingPlotWidget, ConfigGeneratorWidget, ProgressWindow
+from .gui import AgeingVisualizationWindow, ConfigGeneratorWidget, ProgressWindow
 from .services import (
     AgeingCalculationService,
     DataNormalizer,
@@ -58,6 +58,7 @@ class AgeingAnalysisApp:
         self.debug_mode = debug_mode
         self.prominence_percent = prominence_percent
         self.peak_merge_threshold = peak_merge_threshold
+        self.visualization_window = None
 
         # Configure logging based on debug mode
         self._configure_logging()
@@ -149,9 +150,6 @@ class AgeingAnalysisApp:
 
         # Create analysis tab
         self._create_analysis_tab()
-
-        # Create visualization tab
-        self._create_visualization_tab()
 
         # Create status bar
         self._create_status_bar()
@@ -265,6 +263,15 @@ class AgeingAnalysisApp:
             style="Large.TButton",
         ).pack(side=tk.LEFT, padx=10)
 
+        self.viz_btn = ttk.Button(
+            button_frame,
+            text="Open Visualization",
+            command=self._open_visualization,
+            state=tk.DISABLED,
+            style="Large.TButton",
+        )
+        self.viz_btn.pack(side=tk.LEFT, padx=10)
+
         # Results section
         results_frame = ttk.LabelFrame(main_frame, text="Results", padding="10")
         results_frame.pack(fill=tk.BOTH, expand=True)
@@ -278,24 +285,41 @@ class AgeingAnalysisApp:
         self.results_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-    def _create_visualization_tab(self):
-        """Create the visualization tab."""
-        self.viz_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.viz_frame, text="Visualization")
+    def _open_visualization(self):
+        """Open the visualization window."""
+        try:
+            if (
+                self.visualization_window is None
+                or not hasattr(self.visualization_window, "window")
+                or not self.visualization_window.window.winfo_exists()
+            ):
+                # Create new visualization window
+                results_data = None
+                if self.results_path:
+                    # Load results from file
+                    results_data = load_results(self.results_path)
+                elif self.config:
+                    # Use current config data
+                    results_data = self.config.to_dict()
 
-        # Create plotting widget
-        self.plot_widget = AgeingPlotWidget(self.viz_frame)
+                self.visualization_window = AgeingVisualizationWindow(
+                    self.root, results_data
+                )
+                self.status_var.set("Visualization window opened")
+            else:
+                # Window exists, just bring it to front
+                self.visualization_window.show()
+                self.status_var.set("Visualization window brought to front")
 
-        # Load results button if no data is loaded
-        if not self.plot_widget.data:
-            load_frame = ttk.Frame(self.viz_frame)
-            load_frame.pack(fill=tk.X, padx=10, pady=10)
+        except Exception as e:
+            error_msg = f"Failed to open visualization: {str(e)}"
+            logger.error(error_msg)
+            messagebox.showerror("Error", error_msg)
 
-            ttk.Button(
-                load_frame,
-                text="Load Results for Visualization",
-                command=self._load_results_for_viz,
-            ).pack()
+    def _enable_visualization_button(self):
+        """Enable the visualization button."""
+        if hasattr(self, "viz_btn"):
+            self.viz_btn.config(state=tk.NORMAL)
 
     def _create_status_bar(self):
         """Create status bar at the bottom."""
@@ -388,20 +412,17 @@ class AgeingAnalysisApp:
                 results = load_results(file_path)
                 self._display_results(results)
                 self.results_path = file_path
-                self.status_var.set("Results loaded successfully")
 
-                # Load into visualization tab
-                self.plot_widget.load_from_json_file(file_path)
+                # Enable visualization button
+                self._enable_visualization_button()
+
+                self.status_var.set("Results loaded successfully")
 
         except Exception as e:
             error_msg = f"Failed to load results: {str(e)}"
             logger.error(error_msg)
             messagebox.showerror("Error", error_msg)
             self.status_var.set("Error loading results")
-
-    def _load_results_for_viz(self):
-        """Load results specifically for visualization."""
-        self._load_results_file()
 
     def _save_results(self):
         """Save current results to file."""
@@ -687,13 +708,10 @@ class AgeingAnalysisApp:
             results_dict = self.config.to_dict()
             self._display_results(results_dict)
 
-            # Load into visualization
-            self.plot_widget.load_from_json_file(results_path)
+            # Enable visualization button
+            self._enable_visualization_button()
 
-            # Switch to visualization tab
-            self.notebook.select(1)
-
-            self.status_var.set("Analysis completed successfully")
+            self.status_var.set("Analysis completed successfully - Results saved")
 
         except Exception as e:
             error_msg = f"Error handling analysis completion: {str(e)}"
