@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.0.2...v1.0.3) (2025-07-14)
+
+
+### Bug Fixes
+
+* update safety check command in CI workflow ([08f7d5c](https://github.com/mateuszpolis/AgeingAnalysis/commit/08f7d5c3c0bf8f8fd16403c33a8b3b5d3842c52c))
+
 ## [1.0.2](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.0.1...v1.0.2) (2025-07-14)
 
 
