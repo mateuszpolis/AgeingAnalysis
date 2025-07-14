@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ageing-analysis"
-version = "1.0.3"
+version = "1.0.4"
 description = "FIT Detector Ageing Analysis Module"
 readme = "README.md"
 license = {text = "MIT"}
@@ -108,7 +108,7 @@ skip_glob = ["old/*"]
 
 
 [tool.mypy]
-python_version = "1.0.3"
+python_version = "1.0.4"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
@@ -163,7 +163,7 @@ exclude_lines = [
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "1.0.3"
+version = "1.0.4"
 version_files = [
     "pyproject.toml:version",
     "ageing_analysis/__init__.py:__version__",

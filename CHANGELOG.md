@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.0.3...v1.0.4) (2025-07-14)
+
+
+### Bug Fixes
+
+* update output paths for ageing analysis results ([88ab235](https://github.com/mateuszpolis/AgeingAnalysis/commit/88ab235b0b4fc7186c5b969d81dfbab6d7df7219))
+
 ## [1.0.3](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.0.2...v1.0.3) (2025-07-14)
 
 
