@@ -46,26 +46,26 @@ DEFAULT_CONFIG = {
 
 def load_config(config_path: Optional[Path] = None) -> Dict[str, Any]:
     """Load configuration from file or return default configuration.
-    
+
     Args:
         config_path: Path to configuration file (optional)
-        
+
     Returns:
         Configuration dictionary
     """
     if config_path is None:
         config_path = Path(__file__).parent / "config.json"
-    
+
     try:
         if config_path.exists():
-            with open(config_path, 'r') as f:
-                config = json.load(f)
+            with open(config_path) as f:
+                config: Dict[str, Any] = json.load(f)
             logger.info(f"Configuration loaded from {config_path}")
             return config
         else:
             logger.info("No configuration file found, using defaults")
             return DEFAULT_CONFIG.copy()
-            
+
     except Exception as e:
         logger.warning(f"Error loading configuration: {e}, using defaults")
         return DEFAULT_CONFIG.copy()
@@ -73,24 +73,24 @@ def load_config(config_path: Optional[Path] = None) -> Dict[str, Any]:
 
 def save_config(config: Dict[str, Any], config_path: Optional[Path] = None) -> bool:
     """Save configuration to file.
-    
+
     Args:
         config: Configuration dictionary to save
         config_path: Path to save configuration file (optional)
-        
+
     Returns:
         True if successful, False otherwise
     """
     if config_path is None:
         config_path = Path(__file__).parent / "config.json"
-    
+
     try:
         config_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(config_path, 'w') as f:
+        with open(config_path, "w") as f:
             json.dump(config, f, indent=2)
         logger.info(f"Configuration saved to {config_path}")
         return True
-        
+
     except Exception as e:
         logger.error(f"Error saving configuration: {e}")
-        return False 
+        return False

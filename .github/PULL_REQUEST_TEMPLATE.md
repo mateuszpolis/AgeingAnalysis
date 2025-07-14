@@ -26,9 +26,9 @@
 
 <!-- Provide a detailed list of changes -->
 
-- 
-- 
-- 
+-
+-
+-
 
 ## Testing
 
@@ -97,4 +97,4 @@
 - [ ] Tests reviewed and verified
 - [ ] Documentation reviewed
 - [ ] Breaking changes assessed
-- [ ] Security implications considered 
+- [ ] Security implications considered

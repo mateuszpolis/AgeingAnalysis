@@ -108,7 +108,7 @@ module_info = ageing_analysis.get_module_info()
 if ageing_analysis.is_module_available():
     # Launch the module
     ageing_analysis.launch_module()
-    
+
     # Or integrate with your launcher window
     app = ageing_analysis.AgeingAnalysisApp(parent=your_launcher_window)
     app.run()
@@ -156,7 +156,7 @@ python -m ageing_analysis.main
 The `/old` directory contains all the existing functionality. Use the `MIGRATION_GUIDE.md` to systematically migrate:
 
 1. **Services** (high priority)
-2. **GUI components** (medium priority)  
+2. **GUI components** (medium priority)
 3. **Advanced features** (low priority)
 
 The module is designed to be launcher-compatible from day one, so you can start using it immediately and gradually migrate functionality as needed.
@@ -172,4 +172,4 @@ The module is designed to be launcher-compatible from day one, so you can start 
 
 **Status**: ✅ **Module setup complete - Ready for launcher integration**
 
-The AgeingAnalysis module is now properly structured and ready to be used as a submodule in your tkinter launcher system. The existing code is preserved and ready for migration when you're ready to implement the full functionality. 
+The AgeingAnalysis module is now properly structured and ready to be used as a submodule in your tkinter launcher system. The existing code is preserved and ready for migration when you're ready to implement the full functionality.

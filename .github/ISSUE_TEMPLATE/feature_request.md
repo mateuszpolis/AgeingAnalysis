@@ -32,4 +32,4 @@ Add any other context or screenshots about the feature request here.
 - [ ] I have searched for existing issues before creating this one
 - [ ] This feature would be useful for other users, not just me
 - [ ] I have provided clear use cases for this feature
-- [ ] I understand this feature may take time to implement 
+- [ ] I understand this feature may take time to implement

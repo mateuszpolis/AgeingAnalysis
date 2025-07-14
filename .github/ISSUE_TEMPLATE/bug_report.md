@@ -41,4 +41,4 @@ If you have suggestions on how to fix the bug, please describe them here.
 ## Checklist
 - [ ] I have searched for existing issues before creating this one
 - [ ] I have provided all the requested information
-- [ ] I have tested this with the latest version of the package 
+- [ ] I have tested this with the latest version of the package

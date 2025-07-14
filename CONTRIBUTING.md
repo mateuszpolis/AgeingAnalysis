@@ -101,11 +101,11 @@ refactor: improve error handling in analysis pipeline
    ```bash
    # Run all tests
    pytest
-   
+
    # Run specific test categories
    pytest -m unit
    pytest -m integration
-   
+
    # Check code coverage
    pytest --cov=ageing_analysis --cov-report=html
    ```
@@ -151,32 +151,32 @@ logger = logging.getLogger(__name__)
 
 class ExampleClass:
     """Example class with proper documentation.
-    
+
     Args:
         param1: Description of parameter 1.
         param2: Description of parameter 2.
     """
-    
+
     def __init__(self, param1: str, param2: Optional[int] = None) -> None:
         """Initialize the class."""
         self.param1 = param1
         self.param2 = param2
-    
+
     def example_method(self, data: List[float]) -> float:
         """Calculate something from the data.
-        
+
         Args:
             data: List of input values.
-            
+
         Returns:
             Calculated result.
-            
+
         Raises:
             ValueError: If data is empty.
         """
         if not data:
             raise ValueError("Data cannot be empty")
-        
+
         return sum(data) / len(data)
 ```
 
@@ -294,4 +294,4 @@ When migrating code from the `/old` directory:
 4. Write comprehensive tests
 5. Update documentation
 
-Thank you for contributing to AgeingAnalysis! 🚀 
+Thank you for contributing to AgeingAnalysis! 🚀
