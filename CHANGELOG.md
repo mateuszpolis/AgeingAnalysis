@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.0.1...v1.0.2) (2025-07-14)
+
+
+### Bug Fixes
+
+* update deprecated GitHub Actions to latest versions ([176ecfa](https://github.com/mateuszpolis/AgeingAnalysis/commit/176ecfa1875ca0629e6c9f0fb4d57ce543d53039))
+
 ## [1.0.1](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.0.0...v1.0.1) (2025-07-14)
 
 
