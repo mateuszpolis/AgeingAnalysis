@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.1.0...v1.2.0) (2025-07-14)
+
+
+### Features
+
+* add Time Series and Grid Visualization tabs to Ageing Analysis ([3b67c74](https://github.com/mateuszpolis/AgeingAnalysis/commit/3b67c743c7812d791f95f370ede057071cb325ab))
+
 # [1.1.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.0.4...v1.1.0) (2025-07-14)
 
 
