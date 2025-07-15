@@ -68,6 +68,9 @@ class AgeingVisualizationWindow:
         self._create_status_bar()
         self.window.protocol("WM_DELETE_WINDOW", self._on_closing)
 
+        # Bind keyboard shortcuts
+        self.window.bind("<Control-s>", lambda e: self._export_plot())
+
     def _create_menu_bar(self):
         """Create the menu bar."""
         menubar = tk.Menu(self.window)
@@ -76,7 +79,9 @@ class AgeingVisualizationWindow:
         menubar.add_cascade(label="File", menu=file_menu)
         file_menu.add_command(label="Load Results...", command=self._load_results_file)
         file_menu.add_separator()
-        file_menu.add_command(label="Export Plot...", command=self._export_plot)
+        file_menu.add_command(
+            label="Export Plot...", command=self._export_plot, accelerator="Ctrl+S"
+        )
         file_menu.add_separator()
         file_menu.add_command(label="Close", command=self._on_closing)
         view_menu = tk.Menu(menubar, tearoff=0)
@@ -119,38 +124,73 @@ class AgeingVisualizationWindow:
         if self.time_series_tab:
             self.time_series_tab.results_data = results_data
             self.time_series_tab._process_data()
-        # In the future, update grid_tab as well
+        if self.grid_tab:
+            self.grid_tab.update_results_data(results_data)
 
     def _refresh_tabs(self):
         """Refresh the tabs."""
         if self.time_series_tab:
             self.time_series_tab._process_data()
-        # In the future, refresh grid_tab as well
+        if self.grid_tab and self.results_data:
+            self.grid_tab.update_results_data(self.results_data)
 
     def _export_plot(self):
-        """Export the plot."""
-        if self.time_series_tab and hasattr(self.time_series_tab, "fig"):
-            try:
-                file_path = filedialog.asksaveasfilename(
-                    title="Export Plot",
-                    defaultextension=".png",
-                    filetypes=[
-                        ("PNG files", "*.png"),
-                        ("PDF files", "*.pdf"),
-                        ("SVG files", "*.svg"),
-                        ("All files", "*.*"),
-                    ],
-                    parent=self.window,
-                )
-                if file_path:
-                    self.time_series_tab.fig.savefig(
-                        file_path, dpi=300, bbox_inches="tight"
+        """Export the plot from the currently active tab."""
+        try:
+            # Determine which tab is currently active
+            current_tab = self.notebook.select()
+            tab_id = self.notebook.index(current_tab)
+
+            if tab_id == 0:  # Time Series tab
+                if self.time_series_tab and hasattr(self.time_series_tab, "fig"):
+                    file_path = filedialog.asksaveasfilename(
+                        title="Export Time Series Plot",
+                        defaultextension=".png",
+                        filetypes=[
+                            ("PNG files", "*.png"),
+                            ("PDF files", "*.pdf"),
+                            ("SVG files", "*.svg"),
+                            ("All files", "*.*"),
+                        ],
+                        parent=self.window,
                     )
-                    self.status_var.set(f"Plot exported to {Path(file_path).name}")
-            except Exception as e:
-                error_msg = f"Failed to export plot: {str(e)}"
-                logger.error(error_msg)
-                messagebox.showerror("Error", error_msg, parent=self.window)
+                    if file_path:
+                        self.time_series_tab.fig.savefig(
+                            file_path, dpi=300, bbox_inches="tight"
+                        )
+                        self.status_var.set(
+                            f"Time series plot exported to {Path(file_path).name}"
+                        )
+                else:
+                    messagebox.showwarning(
+                        "Warning",
+                        "No time series plot available to export",
+                        parent=self.window,
+                    )
+
+            elif tab_id == 1:  # Grid Visualization tab
+                if (
+                    self.grid_tab
+                    and hasattr(self.grid_tab, "fig")
+                    and self.grid_tab.fig
+                ):
+                    # Use the grid tab's save functionality
+                    self.grid_tab._save_plot()
+                else:
+                    messagebox.showwarning(
+                        "Warning",
+                        "No grid visualization available to export",
+                        parent=self.window,
+                    )
+            else:
+                messagebox.showwarning(
+                    "Warning", "No plot available to export", parent=self.window
+                )
+
+        except Exception as e:
+            error_msg = f"Failed to export plot: {str(e)}"
+            logger.error(error_msg)
+            messagebox.showerror("Error", error_msg, parent=self.window)
 
     def _reset_zoom(self):
         """Reset the zoom."""
