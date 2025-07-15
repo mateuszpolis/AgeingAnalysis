@@ -172,11 +172,14 @@ class Dataset:
             }
         )
 
-    def to_dict(self, include_signal_data: bool = False) -> Dict:
+    def to_dict(
+        self, include_signal_data: bool = False, include_total_signal_data: bool = True
+    ) -> Dict:
         """Convert the dataset to a dictionary.
 
         Args:
             include_signal_data: Whether to include signal data.
+            include_total_signal_data: Whether to include total signal data.
 
         Returns:
             Dictionary representation of the dataset.
@@ -184,7 +187,10 @@ class Dataset:
         return {
             "date": self.date,
             "reference_means": self._reference_means,
-            "modules": [module.to_dict(include_signal_data) for module in self.modules],
+            "modules": [
+                module.to_dict(include_signal_data, include_total_signal_data)
+                for module in self.modules
+            ],
         }
 
     def __str__(self):

@@ -9,12 +9,15 @@ from typing import Any, Dict
 logger = logging.getLogger(__name__)
 
 
-def save_results(config, output_path: str = None) -> str:
+def save_results(
+    config, output_path: str = None, include_total_signal_data: bool = True
+) -> str:
     """Save analysis results to a JSON file.
 
     Args:
         config: Configuration object containing analysis results.
         output_path: Optional path to save results. If None, uses default.
+        include_total_signal_data: Whether to include total signal data in the results.
 
     Returns:
         Path to the saved results file.
@@ -32,13 +35,17 @@ def save_results(config, output_path: str = None) -> str:
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
         # Convert config to dictionary
-        results_data = config.to_dict(include_signal_data=False)
+        results_data = config.to_dict(
+            include_signal_data=False,
+            include_total_signal_data=include_total_signal_data,
+        )
 
         # Add metadata
         results_data["metadata"] = {
             "generated_at": datetime.now().isoformat(),
             "version": "1.0.0",
             "analysis_type": "ageing_analysis",
+            "include_total_signal_data": include_total_signal_data,
         }
 
         # Save to JSON file

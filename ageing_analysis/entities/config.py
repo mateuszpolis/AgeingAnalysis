@@ -232,11 +232,14 @@ class Config:
 
         return datasets
 
-    def to_dict(self, include_signal_data: bool = False) -> Dict:
+    def to_dict(
+        self, include_signal_data: bool = False, include_total_signal_data: bool = True
+    ) -> Dict:
         """Convert the Config to a dictionary.
 
         Args:
             include_signal_data: Whether to include signal data.
+            include_total_signal_data: Whether to include total signal data.
 
         Returns:
             Dictionary representation of the Config.
@@ -248,7 +251,7 @@ class Config:
         # Otherwise, convert datasets to dictionary
         return {
             "datasets": [
-                dataset.to_dict(include_signal_data)
+                dataset.to_dict(include_signal_data, include_total_signal_data)
                 for dataset in sorted(self.datasets, key=lambda x: x.date)
             ]
         }

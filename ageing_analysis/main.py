@@ -136,6 +136,9 @@ class AgeingAnalysisApp:
         else:
             self.root = tk.Toplevel(self.parent)
 
+        # Create the BooleanVar after root exists
+        self.save_total_signal_data = tk.BooleanVar(value=False)
+
         # Configure window
         self.root.title("AgeingAnalysis - FIT Detector Toolkit")
         self.root.geometry("1400x900")
@@ -244,6 +247,30 @@ class AgeingAnalysisApp:
         analysis_frame = ttk.LabelFrame(main_frame, text="Analysis", padding="10")
         analysis_frame.pack(fill=tk.X, pady=(0, 20))
 
+        # Analysis options frame
+        options_frame = ttk.Frame(analysis_frame)
+        options_frame.pack(fill=tk.X, pady=(0, 10))
+
+        # Checkbox for saving total signal data
+        self.save_total_signal_checkbox = ttk.Checkbutton(
+            options_frame,
+            text="Save total signal data in results",
+            variable=self.save_total_signal_data,
+            onvalue=True,
+            offvalue=False,
+        )
+        self.save_total_signal_checkbox.pack(anchor=tk.W, pady=2)
+
+        # Help text for the checkbox
+        help_text = ttk.Label(
+            options_frame,
+            text="When checked, total signal will be included in the results file. "
+            "This allows to analyse histograms in the visualization window.",
+            font=("TkDefaultFont", 10),
+            foreground="gray",
+        )
+        help_text.pack(anchor=tk.W, pady=(0, 5))
+
         button_frame = ttk.Frame(analysis_frame)
         button_frame.pack(pady=10)
 
@@ -299,8 +326,10 @@ class AgeingAnalysisApp:
                     # Load results from file
                     results_data = load_results(self.results_path)
                 elif self.config:
-                    # Use current config data
-                    results_data = self.config.to_dict()
+                    # Use current config data with checkbox setting
+                    results_data = self.config.to_dict(
+                        include_total_signal_data=self.save_total_signal_data.get()
+                    )
 
                 self.visualization_window = AgeingVisualizationWindow(
                     self.root, results_data
@@ -611,48 +640,43 @@ class AgeingAnalysisApp:
 
             # Step 3: Calculate reference means for first dataset
             logger.info("Calculating reference means...")
-            first_dataset = self.config.datasets[0]
-            ref_service = ReferenceChannelService(first_dataset)
-            ref_service.calculate_reference_means()
-            logger.info("Reference means calculated")
+            ref_service = ReferenceChannelService(self.config.datasets[0])
+            (
+                ref_gaussian_mean,
+                ref_weighted_mean,
+            ) = ref_service.calculate_reference_means()
+            self.config.datasets[0].set_reference_means(
+                ref_gaussian_mean, ref_weighted_mean
+            )
 
             # Step 4: Calculate ageing factors for all datasets
             logger.info("Calculating ageing factors...")
-            ref_gaussian = first_dataset.get_reference_gaussian_mean()
-            ref_weighted = first_dataset.get_reference_weighted_mean()
+            ageing_service = AgeingCalculationService(self.config)
+            ageing_service.calculate_all_ageing_factors()
 
-            for i, dataset in enumerate(self.config.datasets):
-                logger.info(f"Calculating ageing factors for {dataset.date}...")
-                ageing_service = AgeingCalculationService(
-                    dataset, ref_gaussian, ref_weighted
-                )
-                ageing_service.calculate_ageing_factors()
-                logger.info(
-                    f"Calculated ageing factors for {dataset.date} "
-                    f"({i+1}/{len(self.config.datasets)})"
-                )
-
-            # Step 5: Normalize data
+            # Step 5: Normalize ageing factors
             logger.info("Normalizing ageing factors...")
             normalizer = DataNormalizer(self.config)
-            normalizer.normalize_data()
-            logger.info("Data normalization completed")
+            normalizer.normalize_all_ageing_factors()
 
             # Step 6: Save results
             logger.info("Saving results...")
-            results_path = save_results(self.config, output_path)
-            self.results_path = results_path
-            logger.info(f"Results saved to: {results_path}")
+            results_path = save_results(
+                self.config,
+                output_path=output_path,
+                include_total_signal_data=True,  # Default to True for headless mode
+            )
 
-            # Step 7: Print summary
+            # Print summary
             self._print_analysis_summary()
 
-            logger.info("Headless analysis completed successfully!")
+            logger.info(
+                f"Analysis completed successfully. Results saved to: {results_path}"
+            )
             return results_path
 
         except Exception as e:
-            error_msg = f"Headless analysis failed: {str(e)}"
-            logger.error(error_msg)
+            logger.error(f"Analysis failed: {e}")
             raise
 
     def _print_analysis_summary(self):
@@ -700,12 +724,16 @@ class AgeingAnalysisApp:
     def _analysis_complete(self):
         """Handle analysis completion."""
         try:
-            # Save results automatically
-            results_path = save_results(self.config)
+            # Save results automatically with the checkbox setting
+            results_path = save_results(
+                self.config, include_total_signal_data=self.save_total_signal_data.get()
+            )
             self.results_path = results_path
 
             # Display results
-            results_dict = self.config.to_dict()
+            results_dict = self.config.to_dict(
+                include_total_signal_data=self.save_total_signal_data.get()
+            )
             self._display_results(results_dict)
 
             # Enable visualization button

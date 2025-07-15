@@ -113,12 +113,13 @@ class TestDataParserIntegration:
         # Store added channels for verification
         module.added_channels = []
 
-        def mock_add_channel(chan_idx, sig_series, noise_series):
+        def mock_add_channel(chan_idx, sig_series, noise_series, total_signal_series):
             module.added_channels.append(
                 {
                     "channel_idx": chan_idx,
                     "signal_series": sig_series.copy(),
                     "noise_series": noise_series.copy(),
+                    "total_signal_series": total_signal_series.copy(),
                 }
             )
 
@@ -576,12 +577,13 @@ class TestDataParserPerformance:
         module.ref_channels = []
         module.added_channels = []
 
-        def mock_add_channel(chan_idx, sig_series, noise_series):
+        def mock_add_channel(chan_idx, sig_series, noise_series, total_signal_series):
             module.added_channels.append(
                 {
                     "channel_idx": chan_idx,
                     "signal_series": sig_series.copy(),
                     "noise_series": noise_series.copy(),
+                    "total_signal_series": total_signal_series.copy(),
                 }
             )
 
@@ -633,12 +635,15 @@ class TestDataParserPerformance:
             module.ref_channels = []
             module.added_channels = []
 
-            def mock_add_channel(chan_idx, sig_series, noise_series, mod=module):
+            def mock_add_channel(
+                chan_idx, sig_series, noise_series, total_signal_series, mod=module
+            ):
                 mod.added_channels.append(
                     {
                         "channel_idx": chan_idx,
                         "signal_series": sig_series.copy(),
                         "noise_series": noise_series.copy(),
+                        "total_signal_series": total_signal_series.copy(),
                     }
                 )
 

@@ -19,18 +19,23 @@ class Channel:
         noise_data: pd.Series,
         is_reference: bool = False,
         integrated_charge: Optional[float] = None,
+        total_signal_data: Optional[pd.Series] = None,
     ):
         """Initialize a Channel object.
 
         Args:
             name: Name of the channel in format "CHx", where x is the channel number.
-            signal_data: Signal Data for the channel.
+            signal_data: Important Signal Data for the channel.
             noise_data: Noise Data for the channel.
+            total_signal_data: Total signal data for the channel.
             is_reference: Whether the channel is a reference channel.
             integrated_charge: Optional integrated charge value for this channel.
         """
         self.name = name
         self.data = signal_data
+        self.total_signal_data = (
+            total_signal_data if total_signal_data is not None else None
+        )
         self.noise_data = noise_data if not is_reference else None
         self.is_reference = is_reference
         self.integrated_charge: Optional[float] = integrated_charge
@@ -126,11 +131,14 @@ class Channel:
             {"gaussian_mean": gaussian_mean, "weighted_mean": weighted_mean}
         )
 
-    def to_dict(self, include_signal_data: bool = False) -> Dict:
+    def to_dict(
+        self, include_signal_data: bool = False, include_total_signal_data: bool = True
+    ) -> Dict:
         """Convert the Channel to a dictionary.
 
         Args:
             include_signal_data: Whether to include signal data in the output.
+            include_total_signal_data: Whether to include total signal in the output.
 
         Returns:
             Dictionary representation of the channel.
@@ -145,6 +153,10 @@ class Channel:
             "means": self._means,
             "ageing_factors": self._ageing_factors,
         }
+
+        if include_total_signal_data and self.total_signal_data is not None:
+            channel_dict["total_signal_data"] = self.total_signal_data.to_dict()
+
         if self.integrated_charge is not None:
             channel_dict["integratedCharge"] = self.integrated_charge
 

@@ -322,11 +322,12 @@ class DataParser:
                 sig_series = sig_df.iloc[:, i] + sig_df.iloc[:, i + 1]
 
             noise_series = noise_df.iloc[:, i] + noise_df.iloc[:, i + 1]
+            total_signal_series = df.iloc[:, i] + df.iloc[:, i + 1]
 
             # re-index so x = 0…N−1
             sig_series.index = np.arange(len(sig_series))
 
-            module.add_channel(chan_idx, sig_series, noise_series)
+            module.add_channel(chan_idx, sig_series, noise_series, total_signal_series)
 
     def process_all_files(self):
         """Process all files in the dataset and return the processed data.

@@ -58,7 +58,11 @@ class Module:
         logger.debug(f"Module {identifier} loaded successfully from {path}")
 
     def add_channel(
-        self, channel_number: int, signal_data: pd.Series, noise_data: pd.Series
+        self,
+        channel_number: int,
+        signal_data: pd.Series,
+        noise_data: pd.Series,
+        total_signal_data: pd.Series,
     ):
         """Add a channel to the module.
 
@@ -66,6 +70,7 @@ class Module:
             channel_number: Channel number.
             signal_data: Signal data for the channel.
             noise_data: Noise data for the channel.
+            total_signal_data: Total signal data for the channel.
         """
         channel_name = f"CH{channel_number:02d}"  # Format as CH01, CH02, etc.
         is_ref_channel = self.is_reference and channel_number in self.ref_channels
@@ -93,7 +98,12 @@ class Module:
                     break
 
         channel = Channel(
-            channel_name, signal_data, noise_data, is_ref_channel, integrated_charge
+            channel_name,
+            signal_data,
+            noise_data,
+            is_ref_channel,
+            integrated_charge,
+            total_signal_data,
         )
 
         # Add channel to the main list
@@ -111,11 +121,14 @@ class Module:
         """
         return self._ref_channel_pointers
 
-    def to_dict(self, include_signal_data: bool = False) -> Dict:
+    def to_dict(
+        self, include_signal_data: bool = False, include_total_signal_data: bool = True
+    ) -> Dict:
         """Convert the module to a dictionary.
 
         Args:
             include_signal_data: Whether to include signal data in the output.
+            include_total_signal_data: Whether to include total signal in the output.
 
         Returns:
             Dictionary representation of the module.
@@ -123,7 +136,8 @@ class Module:
         return {
             "identifier": self.identifier,
             "channels": [
-                channel.to_dict(include_signal_data) for channel in self.channels
+                channel.to_dict(include_signal_data, include_total_signal_data)
+                for channel in self.channels
             ],
         }
 

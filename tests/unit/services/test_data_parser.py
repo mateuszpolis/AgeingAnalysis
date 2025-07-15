@@ -369,11 +369,12 @@ class TestParseAndProcessFile:
 
         # Check first call arguments
         first_call = mock_module.add_channel.call_args_list[0]
-        chan_idx, sig_series, noise_series = first_call[0]
+        chan_idx, sig_series, noise_series, total_signal_series = first_call[0]
 
         assert chan_idx == 1  # First channel index
         assert isinstance(sig_series, pd.Series)
         assert isinstance(noise_series, pd.Series)
+        assert isinstance(total_signal_series, pd.Series)
 
         # Signal should have re-indexed from 0 to N-1
         assert list(sig_series.index) == list(range(len(sig_series)))
@@ -403,7 +404,7 @@ class TestParseAndProcessFile:
 
         # First channel should use reference data
         first_call = mock_module.add_channel.call_args_list[0]
-        chan_idx, sig_series, noise_series = first_call[0]
+        chan_idx, sig_series, noise_series, total_signal_series = first_call[0]
 
         assert chan_idx == 1
         # Signal series should be the mock reference data
@@ -482,7 +483,7 @@ class TestParseAndProcessFile:
 
         # Get the call arguments
         call_args = mock_module.add_channel.call_args_list[0][0]
-        chan_idx, sig_series, noise_series = call_args
+        chan_idx, sig_series, noise_series, total_signal_series = call_args
 
         # Signal should be from row 257 onwards (600-257 = 343 rows)
         # Noise should be from rows 0-256 (257 rows)
