@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.3.0...v1.4.0) (2025-07-15)
+
+
+### Features
+
+* add integrated charge functionality to configuration and analysis ([7ff024f](https://github.com/mateuszpolis/AgeingAnalysis/commit/7ff024f8738d2b75afdd65585c75fced16ee826c))
+
 # [1.3.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.2.0...v1.3.0) (2025-07-15)
 
 
