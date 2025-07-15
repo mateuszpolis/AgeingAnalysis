@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.4.0...v1.5.0) (2025-07-15)
+
+
+### Features
+
+* add total signal data functionality to analysis and results ([f0fd96d](https://github.com/mateuszpolis/AgeingAnalysis/commit/f0fd96d0d67849db750e253ad45351f4abfc70c9))
+
 # [1.4.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.3.0...v1.4.0) (2025-07-15)
 
 
