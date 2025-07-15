@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 
+from ..services.integrated_charge_service import IntegratedChargeService
+
 logger = logging.getLogger(__name__)
 
 
@@ -46,6 +48,7 @@ class TimeSeriesTab:
         self.module_vars: Dict[str, tk.BooleanVar] = {}
         self.gaussian_var = tk.BooleanVar(value=True)
         self.weighted_var = tk.BooleanVar(value=False)
+        self.x_axis_var = tk.StringVar(value="date")
         self._update_pending = False
         self.plot_data_info: Dict[Tuple[str, int], Dict[str, Any]] = {}
         self.tooltip_annotation = None
@@ -64,11 +67,44 @@ class TimeSeriesTab:
         self._create_plot_panel()
 
     def _create_control_panel(self):
+        # X-axis selection
+        x_axis_frame = ttk.LabelFrame(
+            self.control_frame, text="X-Axis Selection", padding="10"
+        )
+        x_axis_frame.pack(fill=tk.X, padx=10, pady=(10, 5))
+
+        # Check if integrated charge is available
+        self.integrated_charge_available = (
+            IntegratedChargeService.is_integrated_charge_available(self.results_data)
+        )
+
+        if self.integrated_charge_available:
+            ttk.Radiobutton(
+                x_axis_frame,
+                text="Date",
+                variable=self.x_axis_var,
+                value="date",
+                command=self._update_plot,
+            ).pack(anchor=tk.W)
+            ttk.Radiobutton(
+                x_axis_frame,
+                text="Integrated Charge",
+                variable=self.x_axis_var,
+                value="integrated_charge",
+                command=self._update_plot,
+            ).pack(anchor=tk.W)
+        else:
+            ttk.Label(
+                x_axis_frame,
+                text="Date (Integrated charge not available)",
+                foreground="gray",
+            ).pack(anchor=tk.W)
+
         # Method selection
         method_frame = ttk.LabelFrame(
             self.control_frame, text="Reference Methods", padding="10"
         )
-        method_frame.pack(fill=tk.X, padx=10, pady=(10, 5))
+        method_frame.pack(fill=tk.X, padx=10, pady=5)
         ttk.Checkbutton(
             method_frame,
             text="Gaussian Mean",
@@ -141,11 +177,21 @@ class TimeSeriesTab:
         ylim = self.ax.get_ylim()
         x_range = xlim[1] - xlim[0]
         y_range = ylim[1] - ylim[0]
+        use_integrated_charge = self.x_axis_var.get() == "integrated_charge"
+
         for line in self.ax.get_lines():
             xdata, ydata = line.get_data()
             if len(xdata) == 0:
                 continue
-            xdata_num = [mdates.date2num(x) if hasattr(x, "year") else x for x in xdata]
+
+            # Convert x values to numbers for distance calculation
+            if use_integrated_charge:
+                xdata_num = xdata  # Already numeric
+            else:
+                xdata_num = [
+                    mdates.date2num(x) if hasattr(x, "year") else x for x in xdata
+                ]
+
             event_x_num = event.xdata
             for i, (x_num, y) in enumerate(zip(xdata_num, ydata)):
                 norm_x = (x_num - xlim[0]) / x_range if x_range > 0 else 0
@@ -345,6 +391,8 @@ class TimeSeriesTab:
             selected_channels = self._get_selected_channels()
             show_gaussian = self.gaussian_var.get()
             show_weighted = self.weighted_var.get()
+            use_integrated_charge = self.x_axis_var.get() == "integrated_charge"
+
             if not selected_channels or (not show_gaussian and not show_weighted):
                 self.ax.clear()
                 if not selected_channels:
@@ -376,18 +424,27 @@ class TimeSeriesTab:
             channel_data = {}
             for dataset in datasets:
                 date_str = dataset.get("date", "unknown")
-                try:
-                    date = datetime.strptime(date_str, "%Y-%m-%d")
-                except ValueError:
-                    for fmt in ["%Y/%m/%d", "%d-%m-%Y", "%d/%m/%Y"]:
-                        try:
-                            date = datetime.strptime(date_str, fmt)
-                            break
-                        except ValueError:
+
+                # Get x-axis value based on selection
+                if use_integrated_charge:
+                    # For integrated charge, we'll use the channel's
+                    # integrated charge value
+                    # We'll get this from the channel data below
+                    pass
+                else:
+                    try:
+                        x_value = datetime.strptime(date_str, "%Y-%m-%d")
+                    except ValueError:
+                        for fmt in ["%Y/%m/%d", "%d-%m-%Y", "%d/%m/%Y"]:
+                            try:
+                                x_value = datetime.strptime(date_str, fmt)
+                                break
+                            except ValueError:
+                                continue
+                        else:
+                            logger.warning(f"Could not parse date: {date_str}")
                             continue
-                    else:
-                        logger.warning(f"Could not parse date: {date_str}")
-                        continue
+
                 for module in dataset.get("modules", []):
                     module_id = module.get("identifier", "unknown")
                     for channel in module.get("channels", []):
@@ -395,6 +452,20 @@ class TimeSeriesTab:
                         channel_key = f"{module_id}_{channel_name}"
                         if channel_key in selected_channels:
                             ageing_factors = channel.get("ageing_factors", {})
+
+                            # Get x-axis value for this specific channel
+                            if use_integrated_charge:
+                                x_value = channel.get("integratedCharge")
+                                if x_value is None:
+                                    logger.warning(
+                                        "No integrated charge for channel "
+                                        f" {channel_key} in dataset {date_str}"
+                                    )
+                                    continue
+                            else:
+                                # Use the date value we already parsed
+                                pass
+
                             if show_gaussian:
                                 gaussian_value = ageing_factors.get(
                                     "normalized_gauss_ageing_factor", None
@@ -406,7 +477,7 @@ class TimeSeriesTab:
                                     if gaussian_key not in channel_data:
                                         channel_data[gaussian_key] = []
                                     channel_data[gaussian_key].append(
-                                        (date, gaussian_value)
+                                        (x_value, gaussian_value)
                                     )
                             if show_weighted:
                                 weighted_value = ageing_factors.get(
@@ -419,13 +490,13 @@ class TimeSeriesTab:
                                     if weighted_key not in channel_data:
                                         channel_data[weighted_key] = []
                                     channel_data[weighted_key].append(
-                                        (date, weighted_value)
+                                        (x_value, weighted_value)
                                     )
             colors = plt.cm.tab20(range(len(selected_channels)))
             for channel_key_method, data_points in channel_data.items():
                 if data_points:
                     data_points.sort(key=lambda x: x[0])
-                    dates, values = zip(*data_points)
+                    x_values, values = zip(*data_points)
                     if channel_key_method.endswith("_gaussian"):
                         channel_key = channel_key_method[:-9]
                         method_label = "Gaussian"
@@ -452,7 +523,7 @@ class TimeSeriesTab:
                     color = colors[channel_index % len(colors)]
                     label = f"{channel_key} ({method_label})"
                     self.ax.plot(
-                        dates,
+                        x_values,
                         values,
                         linestyle=linestyle,
                         marker=marker,
@@ -461,16 +532,39 @@ class TimeSeriesTab:
                         linewidth=2,
                         markersize=6,
                     )[0]
-                    for idx, (date, value) in enumerate(zip(dates, values)):
+                    for idx, (x_val, value) in enumerate(zip(x_values, values)):
                         point_key = (label, idx)
+                        if use_integrated_charge:
+                            x_display = f"{x_val:.0f}"
+                        else:
+                            x_display = x_val.strftime("%Y-%m-%d")
                         self.plot_data_info[point_key] = {
                             "pm": pm_id,
                             "channel": channel_name,
                             "method": method_label,
-                            "date": date.strftime("%Y-%m-%d"),
+                            "date": x_display,
                             "value": value,
                         }
-            self.ax.set_xlabel("Date")
+
+            # Set axis labels and formatting
+            if use_integrated_charge:
+                self.ax.set_xlabel("Integrated Charge")
+                x_title = "Integrated Charge"
+            else:
+                self.ax.set_xlabel("Date")
+                x_title = "Date"
+                # Format x-axis for dates
+                num_datasets = len(datasets)
+                max_ticks = min(8, max(3, num_datasets))
+                from matplotlib.ticker import MaxNLocator
+
+                self.ax.xaxis.set_major_locator(
+                    MaxNLocator(nbins=max_ticks, prune="both")
+                )
+                self.ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
+                plt.setp(self.ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
+                self.ax.tick_params(axis="x", which="major", pad=10)
+
             self.ax.set_ylabel("Normalized Ageing Factor")
             title_methods = []
             if show_gaussian:
@@ -479,18 +573,10 @@ class TimeSeriesTab:
                 title_methods.append("Weighted")
             title = (
                 f"Ageing Analysis - {' & '.join(title_methods)} Method"
-                f"{'s' if len(title_methods) > 1 else ''}"
+                f"{'s' if len(title_methods) > 1 else ''} vs {x_title}"
             )
             self.ax.set_title(title)
             self.ax.grid(True, alpha=0.3)
-            num_datasets = len(datasets)
-            max_ticks = min(8, max(3, num_datasets))
-            from matplotlib.ticker import MaxNLocator
-
-            self.ax.xaxis.set_major_locator(MaxNLocator(nbins=max_ticks, prune="both"))
-            self.ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
-            plt.setp(self.ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
-            self.ax.tick_params(axis="x", which="major", pad=10)
             if channel_data:
                 handles, labels = self.ax.get_legend_handles_labels()
                 if len(handles) <= 20:
@@ -509,9 +595,10 @@ class TimeSeriesTab:
                     for key in channel_data.keys()
                 }
             )
+            axis_text = "integrated charge" if use_integrated_charge else "date"
             self.status_var.set(
                 f"Displaying {unique_channels} channels using {method_text} method"
-                f"{'s' if len(title_methods) > 1 else ''}"
+                f"{'s' if len(title_methods) > 1 else ''} vs {axis_text}"
             )
         except Exception as e:
             error_msg = f"Error updating plot: {str(e)}"

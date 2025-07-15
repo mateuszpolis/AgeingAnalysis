@@ -2,7 +2,7 @@
 
 import logging
 import math
-from typing import Dict, Union
+from typing import Any, Dict, Optional, Union
 
 import pandas as pd
 
@@ -18,6 +18,7 @@ class Channel:
         signal_data: pd.Series,
         noise_data: pd.Series,
         is_reference: bool = False,
+        integrated_charge: Optional[float] = None,
     ):
         """Initialize a Channel object.
 
@@ -26,11 +27,13 @@ class Channel:
             signal_data: Signal Data for the channel.
             noise_data: Noise Data for the channel.
             is_reference: Whether the channel is a reference channel.
+            integrated_charge: Optional integrated charge value for this channel.
         """
         self.name = name
         self.data = signal_data
         self.noise_data = noise_data if not is_reference else None
         self.is_reference = is_reference
+        self.integrated_charge: Optional[float] = integrated_charge
         self._means: Dict[str, float] = {"gaussian_mean": 0.0, "weighted_mean": 0.0}
         self._ageing_factors: Dict[str, Union[float, str]] = {
             "gaussian_ageing_factor": 0.0,
@@ -137,11 +140,13 @@ class Channel:
         ):
             return {"name": self.name, "means": "N/A", "ageing_factors": "N/A"}
 
-        channel_dict = {
+        channel_dict: Dict[str, Any] = {
             "name": self.name,
             "means": self._means,
             "ageing_factors": self._ageing_factors,
         }
+        if self.integrated_charge is not None:
+            channel_dict["integratedCharge"] = self.integrated_charge
 
         if include_signal_data:
             channel_dict["signal_data"] = self.data.to_dict()
@@ -155,9 +160,14 @@ class Channel:
         """Return string representation of the Channel."""
         channel_id = int(self.name[2:])
         first_column, second_column = channel_id * 2 - 1, channel_id * 2
+        charge_info = (
+            f", integrated_charge={self.integrated_charge}"
+            if self.integrated_charge is not None
+            else ""
+        )
         return (
             f"Channel(name={self.name}, columns=({first_column}, {second_column}), "
-            f"is_reference={self.is_reference})"
+            f"is_reference={self.is_reference}{charge_info})"
         )
 
     def __repr__(self):

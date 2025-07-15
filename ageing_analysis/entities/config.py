@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from typing import Dict, List
 
+from ..utils.validation import validate_integrated_charge_format
 from .dataset import Dataset
 
 logger = logging.getLogger(__name__)
@@ -199,7 +200,23 @@ class Config:
                 )
             validate_header = input_data.get("validateHeader", False)
 
-            dataset = Dataset(date, base_path, files, ref_ch, validate_header)
+            # Get integrated charge data if available
+            integrated_charge_data = input_data.get("integratedCharge", None)
+
+            # Validate integrated charge data format
+            if integrated_charge_data is not None:
+                if not validate_integrated_charge_format(integrated_charge_data, date):
+                    logger.warning(
+                        "Integrated charge data format validation failed for "
+                        f"dataset {date}. "
+                        "Continuing analysis without integrated charge data."
+                    )
+                    integrated_charge_data = None
+
+            dataset = Dataset(
+                date, base_path, files, ref_ch, validate_header, integrated_charge_data
+            )
+
             datasets.append(dataset)
             logger.debug(f"Added dataset {date} to the list")
 

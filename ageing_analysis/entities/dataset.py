@@ -2,7 +2,9 @@
 
 import logging
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
+
+from ageing_analysis.utils.normalization import normalize_pm_name
 
 from ..utils.validation import validate_file_identifier
 from .module import Module
@@ -20,6 +22,7 @@ class Dataset:
         files: Dict[str, str],
         ref_ch: Dict[str, Any],
         validate_header: bool,
+        integrated_charge_data: Optional[Dict[str, Dict[str, float]]] = None,
     ):
         """Initialize and validate the dataset.
 
@@ -29,10 +32,11 @@ class Dataset:
             files: Dictionary of PM files with their paths.
             ref_ch: Reference module and channel information.
             validate_header: Whether to validate headers in the files.
+            integrated_charge_data: Integrated charge data for the dataset.
         """
         self.date: str = date
         self.modules: List[Module] = self._initialize_modules(
-            base_path, files, ref_ch, validate_header
+            base_path, files, ref_ch, validate_header, integrated_charge_data
         )
         self._reference_module: Module = self._get_reference_module(ref_ch)
         self._reference_means: Dict[str, float] = {
@@ -50,6 +54,7 @@ class Dataset:
         files: Dict[str, str],
         ref_ch: Dict[str, Any],
         validate_header: bool,
+        integrated_charge_data: Optional[Dict[str, Dict[str, float]]] = None,
     ) -> List[Module]:
         """Load and validate modules.
 
@@ -58,6 +63,7 @@ class Dataset:
             files: Dictionary of PM files with their paths.
             ref_ch: Reference module and channel information.
             validate_header: Whether to validate headers in files.
+            integrated_charge_data: Integrated charge data for the dataset.
 
         Returns:
             List of Module objects.
@@ -77,6 +83,24 @@ class Dataset:
             file_path = os.path.join(base_path, file_name.strip())
             is_reference = identifier == ref_pm
 
+            module_integrated_charge_data = None
+            # Get integrated charge data for this module if available
+            print("Integrated charge data: ", integrated_charge_data)
+            if integrated_charge_data:
+                # Normalize the module identifier to match config keys
+                normalized_identifier = normalize_pm_name(identifier)
+
+                # Look for the normalized identifier in the integrated charge data
+                for config_pm_name, pm_charge_data in integrated_charge_data.items():
+                    normalized_config_pm = normalize_pm_name(config_pm_name)
+                    if normalized_config_pm == normalized_identifier:
+                        module_integrated_charge_data = {identifier: pm_charge_data}
+                        logger.debug(
+                            f"Found integrated charge data for module {identifier} "
+                            f"(config: {config_pm_name})"
+                        )
+                        break
+
             # Initialize Module with appropriate attributes
             module = Module(
                 path=file_path,
@@ -84,6 +108,7 @@ class Dataset:
                 is_reference=is_reference,
                 ref_channels=ref_channels if is_reference else None,
                 validate_header=validate_header,
+                integrated_charge_data=module_integrated_charge_data,
             )
             modules.append(module)
 

@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 
+from ..utils.normalization import normalize_channel_name
 from ..utils.validation import validate_csv
 from .channel import Channel
 
@@ -22,6 +23,7 @@ class Module:
         is_reference: bool = False,
         ref_channels: Optional[List[int]] = None,
         validate_header: bool = False,
+        integrated_charge_data: Optional[Dict[str, Dict[str, float]]] = None,
     ):
         """Initialize a module and validate its file.
 
@@ -31,6 +33,7 @@ class Module:
             is_reference: Whether the module is a reference.
             ref_channels: List of reference channels.
             validate_header: Whether to validate the header in the file.
+            integrated_charge_data: Optional integrated charge data for channels.
 
         Raises:
             Exception: If the file does not exist or is not a valid CSV.
@@ -41,6 +44,9 @@ class Module:
         self.ref_channels: List[int] = ref_channels or []
         self.channels: List[Channel] = []
         self._ref_channel_pointers: List[Channel] = []
+        self.integrated_charge_data: Optional[
+            Dict[str, Dict[str, float]]
+        ] = integrated_charge_data
 
         # Validate file existence and format
         if not os.path.exists(path):
@@ -61,9 +67,34 @@ class Module:
             signal_data: Signal data for the channel.
             noise_data: Noise data for the channel.
         """
-        channel_name = f"CH{channel_number}"
+        channel_name = f"CH{channel_number:02d}"  # Format as CH01, CH02, etc.
         is_ref_channel = self.is_reference and channel_number in self.ref_channels
-        channel = Channel(channel_name, signal_data, noise_data, is_ref_channel)
+
+        # Get integrated charge for this channel if available
+        integrated_charge = None
+        if (
+            self.integrated_charge_data
+            and self.identifier in self.integrated_charge_data
+        ):
+            pm_charge_data = self.integrated_charge_data[self.identifier]
+
+            # Try to find the channel with normalized names
+            normalized_channel_name = normalize_channel_name(channel_name)
+
+            # Look for the channel in the charge data using normalized names
+            for config_channel_name, charge_value in pm_charge_data.items():
+                normalized_config_name = normalize_channel_name(config_channel_name)
+                if normalized_config_name == normalized_channel_name:
+                    integrated_charge = charge_value
+                    logger.debug(
+                        f"Found integrated charge {charge_value} for channel "
+                        f"{channel_name} (config: {config_channel_name})"
+                    )
+                    break
+
+        channel = Channel(
+            channel_name, signal_data, noise_data, is_ref_channel, integrated_charge
+        )
 
         # Add channel to the main list
         self.channels.append(channel)
@@ -105,4 +136,4 @@ class Module:
 
     def __repr__(self):
         """Return string representation of the Module."""
-        return self.__str__()
+        return str(self)

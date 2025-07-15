@@ -81,6 +81,7 @@ class TestConfigPathResolution:
             {"PMA0": "test.csv"},
             {"PM": "PMA0", "CH": [0]},
             False,
+            None,  # integrated_charge_data parameter
         )
 
     @patch("ageing_analysis.entities.config.Dataset")
@@ -160,6 +161,7 @@ class TestConfigPathResolution:
             {"PMA0": "test.csv"},
             {"PM": "PMA0", "CH": [0]},
             False,
+            None,  # integrated_charge_data parameter
         )
 
     @patch("ageing_analysis.entities.config.Dataset")
@@ -195,6 +197,7 @@ class TestConfigPathResolution:
             {"PMA0": "test.csv"},
             {"PM": "PMA0", "CH": [0]},
             False,
+            None,  # integrated_charge_data parameter
         )
 
     @patch("ageing_analysis.entities.config.Dataset")

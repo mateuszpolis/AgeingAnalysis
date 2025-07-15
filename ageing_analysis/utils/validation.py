@@ -2,7 +2,9 @@
 
 import logging
 import os
+import re
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -84,3 +86,101 @@ def validate_path_exists(path: str) -> bool:
     except Exception as e:
         logger.error(f"Error validating path {path}: {e}")
         return False
+
+
+def validate_integrated_charge_format(
+    integrated_charge_data: Any, dataset_date: str
+) -> bool:
+    """Validate the format of integrated charge data.
+
+    Expected format:
+    {
+        "PMA0": {
+            "Ch01": 0.0,
+            "Ch02": 0.0,
+            ...
+        },
+        "PMA1": {
+            "Ch01": 0.0,
+            "Ch02": 0.0,
+            ...
+        },
+        ...
+    }
+
+    Args:
+        integrated_charge_data: The integrated charge data to validate.
+        dataset_date: The date of the dataset for logging purposes.
+
+    Returns:
+        True if the format is valid, False otherwise.
+    """
+    if integrated_charge_data is None:
+        return True  # None is valid (no integrated charge data)
+
+    if not isinstance(integrated_charge_data, dict):
+        logger.warning(
+            f"Integrated charge data for dataset {dataset_date} is not a dictionary. "
+            f"Expected dict, got {type(integrated_charge_data).__name__}. "
+            "Integrated charge analysis will be skipped for this dataset."
+        )
+        return False
+
+    # Validate PM structure
+    for pm_name, pm_data in integrated_charge_data.items():
+        # Check PM name format
+        if not validate_file_identifier(pm_name):
+            logger.warning(
+                f"Invalid PM name '{pm_name}' in integrated charge data for "
+                f"dataset {dataset_date}. "
+                f"Expected format: PMA0-PMA9 or PMC0-PMC9. "
+                "Integrated charge analysis will be skipped for this dataset."
+            )
+            return False
+
+        # Check PM data structure
+        if not isinstance(pm_data, dict):
+            logger.warning(
+                f"PM data for '{pm_name}' in dataset {dataset_date} is not a "
+                f"dictionary. "
+                f"Expected dict, got {type(pm_data).__name__}. "
+                "Integrated charge analysis will be skipped for this dataset."
+            )
+            return False
+
+        # Validate channel structure
+        for channel_name, charge_value in pm_data.items():
+            # Check channel name format (Ch01-Ch12)
+            if not re.match(r"^Ch(0[1-9]|1[0-2])$", channel_name):
+                logger.warning(
+                    f"Invalid channel name '{channel_name}' for PM '{pm_name}' "
+                    f"in dataset {dataset_date}. "
+                    "Expected format: Ch01-Ch12. "
+                    "Integrated charge analysis will be skipped for this dataset."
+                )
+                return False
+
+            # Check charge value type
+            if not isinstance(charge_value, (int, float)):
+                logger.warning(
+                    f"Invalid charge value type for channel '{channel_name}' in "
+                    f"PM '{pm_name}' for dataset {dataset_date}. Expected number, "
+                    f"got {type(charge_value).__name__}. "
+                    "Integrated charge analysis will be skipped for this dataset."
+                )
+                return False
+
+            # Check for negative values
+            if charge_value < 0:
+                logger.warning(
+                    f"Negative charge value {charge_value} for channel "
+                    f"'{channel_name}' in PM '{pm_name}' "
+                    f"for dataset {dataset_date}. "
+                    "Integrated charge analysis will be skipped for this dataset."
+                )
+                return False
+
+    logger.debug(
+        f"Integrated charge data format validation passed for dataset {dataset_date}"
+    )
+    return True

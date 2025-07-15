@@ -63,9 +63,9 @@ class GaussianFitService:
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("error", OptimizeWarning)
-                print(f"Initial guess: {initial_guess}")
                 params, _ = curve_fit(self.gaussian, x_data, y_data, p0=initial_guess)
-                print(f"Params: {params}")
+                logger.debug(f"Initial guess: {initial_guess}")
+                logger.debug(f"Params: {params}")
             return float(params[1])  # Gaussian mean
         except (OptimizeWarning, RuntimeError):
             logger.warning("Gaussian fit failed or covariance could not be estimated.")
