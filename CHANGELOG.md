@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.2.0...v1.3.0) (2025-07-15)
+
+
+### Features
+
+* enhance grid visualization functionality ([ecaf92c](https://github.com/mateuszpolis/AgeingAnalysis/commit/ecaf92c8964c491b14cc464b8accb96eee39e23e))
+
 # [1.2.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.1.0...v1.2.0) (2025-07-14)
 
 
