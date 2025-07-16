@@ -9,7 +9,7 @@ description = "FIT Detector Ageing Analysis Module"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "FIT Detector Team", email = "fit-detector@cern.ch"},
+    {name = "Mateusz Polis", email = "mateusz.polis@cern.ch"},
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -68,12 +68,6 @@ docs = [
 [project.scripts]
 ageing-analysis = "ageing_analysis.main:main"
 ageing-analysis-gui = "ageing_analysis.main:main"
-
-[project.urls]
-Homepage = "https://github.com/your-org/AgeingAnalysis"
-Documentation = "https://github.com/your-org/AgeingAnalysis#readme"
-Repository = "https://github.com/your-org/AgeingAnalysis"
-Issues = "https://github.com/your-org/AgeingAnalysis/issues"
 
 # Tool configurations
 [tool.black]

@@ -9,7 +9,7 @@ with open("README.md", encoding="utf-8") as fh:
 setup(
     name="ageing-analysis",
     version="1.0.0",
-    author="FIT Detector Team",
+    author="Mateusz Polis, mateusz.polis@cern.ch",
     description="FIT Detector Ageing Analysis Module",
     long_description=long_description,
     long_description_content_type="text/markdown",
