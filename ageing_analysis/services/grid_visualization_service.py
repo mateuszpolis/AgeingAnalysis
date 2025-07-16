@@ -1,6 +1,7 @@
 """Grid Visualization Service for Ageing Analysis."""
 
 import csv
+import importlib.resources
 import logging
 import re
 from pathlib import Path
@@ -48,36 +49,63 @@ def normalize_pm_channel(pm: str, channel: str) -> str:
 class GridVisualizationService:
     """Service for handling grid visualizations of ageing analysis results."""
 
-    def __init__(self, mappings_dir: str = "grid_visualization_mappings"):
+    def __init__(self, mappings_dir: str = None):
         """Initialize the GridVisualizationService.
 
         Args:
-            mappings_dir: Directory containing mapping CSV files
+            mappings_dir: Directory containing mapping CSV files. Package resources
+                are used if not provided.
         """
-        self.mappings_dir = Path(mappings_dir)
+        self.mappings_dir = Path(mappings_dir) if mappings_dir else None
         self.mappings_cache: Dict[str, Dict[str, Any]] = {}
         self._load_mappings()
 
     def _load_mappings(self):
         """Load all mapping files from the mappings directory."""
-        if not self.mappings_dir.exists():
-            logger.warning(f"Mappings directory {self.mappings_dir} does not exist")
-            return
+        if self.mappings_dir is not None:
+            # Use file system path if provided
+            if not self.mappings_dir.exists():
+                logger.warning(f"Mappings directory {self.mappings_dir} does not exist")
+                return
 
-        for csv_file in self.mappings_dir.glob("*.csv"):
+            for csv_file in self.mappings_dir.glob("*.csv"):
+                try:
+                    mapping_info = self._load_mapping_file_from_path(csv_file)
+                    if mapping_info:
+                        self.mappings_cache[csv_file.stem] = mapping_info
+                        logger.info(
+                            f"Loaded mapping: {csv_file.stem} with"
+                            f" {len(mapping_info['mapping'])} channels"
+                        )
+                except Exception as e:
+                    logger.error(f"Failed to load mapping file {csv_file}: {e}")
+        else:
+            # Use package resources
             try:
-                mapping_info = self._load_mapping_file(csv_file)
-                if mapping_info:
-                    self.mappings_cache[csv_file.stem] = mapping_info
-                    logger.info(
-                        f"Loaded mapping: {csv_file.stem} with"
-                        f" {len(mapping_info['mapping'])} channels"
-                    )
+                mappings_path = importlib.resources.files(
+                    "ageing_analysis.grid_visualization_mappings"
+                )
+                for csv_file in mappings_path.iterdir():
+                    if csv_file.name.endswith(".csv"):
+                        try:
+                            mapping_info = self._load_mapping_file_from_resource(
+                                csv_file.name
+                            )
+                            if mapping_info:
+                                self.mappings_cache[csv_file.stem] = mapping_info
+                                logger.info(
+                                    f"Loaded mapping: {csv_file.stem} with"
+                                    f" {len(mapping_info['mapping'])} channels"
+                                )
+                        except Exception as e:
+                            logger.error(
+                                f"Failed to load mapping file {csv_file.name}: {e}"
+                            )
             except Exception as e:
-                logger.error(f"Failed to load mapping file {csv_file}: {e}")
+                logger.error(f"Failed to access package resources: {e}")
 
-    def _load_mapping_file(self, file_path: Path) -> Optional[Dict]:
-        """Load a single mapping file and return mapping information.
+    def _load_mapping_file_from_path(self, file_path: Path) -> Optional[Dict]:
+        """Load a single mapping file from file system path and return mapping data.
 
         Args:
             file_path: Path to the CSV mapping file
@@ -121,6 +149,58 @@ class GridVisualizationService:
             }
         except Exception as e:
             logger.error(f"Error loading mapping file {file_path}: {e}")
+            return None
+
+    def _load_mapping_file_from_resource(self, filename: str) -> Optional[Dict]:
+        """Load a single mapping file from package resources and return mapping data.
+
+        Args:
+            filename: Name of the CSV mapping file
+
+        Returns:
+            Dictionary containing mapping data and metadata
+        """
+        mapping = {}
+        channel_count = 0
+
+        try:
+            with importlib.resources.open_text(
+                "ageing_analysis.grid_visualization_mappings", filename
+            ) as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    pm_channel = row.get("PM:Channel", "").strip()
+                    if pm_channel:
+                        try:
+                            row_pos = float(row.get("row", 0))
+                            col_pos = float(row.get("col", 0))
+
+                            # Split PM:Channel and normalize
+                            if ":" in pm_channel:
+                                pm, channel = pm_channel.split(":", 1)
+                                normalized_key = normalize_pm_channel(pm, channel)
+                            else:
+                                # If no colon, assume it's just a channel name
+                                normalized_key = normalize_pm_channel("", pm_channel)
+
+                            mapping[normalized_key] = (row_pos, col_pos)
+                            channel_count += 1
+                        except ValueError as e:
+                            logger.warning(
+                                f"Invalid position values in {filename}: {e}"
+                            )
+
+            return {
+                "mapping": mapping,
+                "channel_count": channel_count,
+                "file_path": (
+                    f"package://ageing_analysis.grid_visualization_mappings/"
+                    f"{filename}"
+                ),
+                "name": Path(filename).stem,
+            }
+        except Exception as e:
+            logger.error(f"Error loading mapping file {filename} from resources: {e}")
             return None
 
     def get_available_mappings(self) -> List[Dict]:

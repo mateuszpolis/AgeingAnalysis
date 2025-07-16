@@ -155,6 +155,9 @@ exclude_lines = [
     "@(abc\\.)?abstractmethod",
 ]
 
+[tool.setuptools.package-data]
+ageing_analysis = ["grid_visualization_mappings/*"]
+
 [tool.commitizen]
 name = "cz_conventional_commits"
 version = "1.5.0"
