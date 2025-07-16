@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.5.0...v1.6.0) (2025-07-16)
+
+
+### Features
+
+* enhance grid visualization service with resource loading ([c9b73c1](https://github.com/mateuszpolis/AgeingAnalysis/commit/c9b73c1f9b56cdb5b3ab8176b8fd8467e66acb58))
+
 # [1.5.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.4.0...v1.5.0) (2025-07-15)
 
 
