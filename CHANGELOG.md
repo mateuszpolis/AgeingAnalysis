@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.6.0...v1.7.0) (2025-07-17)
+
+
+### Features
+
+* add new dataset comparison JSON and enhance Gaussian fitting service ([924dc64](https://github.com/mateuszpolis/AgeingAnalysis/commit/924dc64b1e9b3eea3c7beb1ebfc3e92dcf66a8bc))
+
 # [1.6.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.5.0...v1.6.0) (2025-07-16)
 
 
