@@ -289,10 +289,29 @@ class DataParser:
         rb = props["right_bases"][first_peak_idx]
         logger.debug(f"First peak spans bins {lb}→{rb}")
 
-        # Return that slice as a Series, preserving original index
+        # Get the selected region
+        selected_data = summed.iloc[lb:rb].values
+
+        # Create a full-length series with zeros, maintaining original peak positions
+        # The original data had length len(data), so we create a series of that length
+        full_data = np.zeros(len(data))
+
+        # Place the selected region at the correct position
+        # lb and rb are indices in the cut data (after removing first 50 bins)
+        # So in the original data, they correspond to positions lb+50 and rb+50
+        original_lb = lb + 50
+        original_rb = rb + 50
+
+        # Place the selected data at the correct position in the full series
+        full_data[original_lb:original_rb] = selected_data
+
+        # Create index that matches the original data positions
+        original_index = np.arange(len(full_data))
+
+        # Return the series with the peak at its original position
         return pd.Series(
-            summed.iloc[lb:rb].values,
-            index=summed.index[lb:rb],
+            full_data,
+            index=original_index,
             name=f"ref_chan_{col1}_{col2}",
         )
 

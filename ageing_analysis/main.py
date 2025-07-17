@@ -543,7 +543,9 @@ class AgeingAnalysisApp:
                 progress.add_log_message(
                     f"Fitting Gaussians for dataset {dataset.date}..."
                 )
-                gaussian_service = GaussianFitService(dataset)
+                gaussian_service = GaussianFitService(
+                    dataset, debug_mode=self.debug_mode
+                )
                 gaussian_service.process_all_modules()
                 progress.update_progress(
                     40 + (i + 1) * 10, f"Fitted Gaussians for {dataset.date}"
@@ -631,7 +633,9 @@ class AgeingAnalysisApp:
             logger.info("Fitting Gaussian distributions...")
             for i, dataset in enumerate(self.config.datasets):
                 logger.info(f"Fitting Gaussians for dataset {dataset.date}...")
-                gaussian_service = GaussianFitService(dataset)
+                gaussian_service = GaussianFitService(
+                    dataset, debug_mode=self.debug_mode
+                )
                 gaussian_service.process_all_modules()
                 logger.info(
                     f"Fitted Gaussians for {dataset.date} "
@@ -778,7 +782,9 @@ class AgeingAnalysisApp:
 
         try:
             for dataset in self.config.datasets:
-                gaussian_service = GaussianFitService(dataset)
+                gaussian_service = GaussianFitService(
+                    dataset, debug_mode=self.debug_mode
+                )
                 gaussian_service.process_all_modules()
 
             self._add_result_text("Gaussian fitting completed successfully")

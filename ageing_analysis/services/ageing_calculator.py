@@ -2,6 +2,8 @@
 
 import logging
 
+from ageing_analysis.entities.dataset import Dataset
+
 logger = logging.getLogger(__name__)
 
 
@@ -10,9 +12,9 @@ class AgeingCalculationService:
 
     def __init__(
         self,
-        dataset,
-        reference_gaussian_mean: float,
-        reference_weighted_mean: float,
+        dataset: Dataset,
+        reference_gaussian_mean: float = 0,
+        reference_weighted_mean: float = 0,
     ):
         """Initialize the ageing calculation service.
 

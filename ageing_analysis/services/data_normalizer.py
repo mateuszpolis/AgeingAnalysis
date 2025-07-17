@@ -3,13 +3,16 @@
 import logging
 from typing import Dict
 
+from ageing_analysis.entities.config import Config
+from ageing_analysis.entities.dataset import Dataset
+
 logger = logging.getLogger(__name__)
 
 
 class DataNormalizer:
     """Normalizes ageing calculation results."""
 
-    def __init__(self, config):
+    def __init__(self, config: Config):
         """Initialize the data normalizer.
 
         Args:
@@ -17,7 +20,7 @@ class DataNormalizer:
         """
         self.config = config
 
-    def _get_divisors(self, dataset) -> Dict[str, Dict[str, Dict[str, float]]]:
+    def _get_divisors(self, dataset: Dataset) -> Dict[str, Dict[str, Dict[str, float]]]:
         """Get the divisors (first ageing factors) for the dataset.
 
         Args:

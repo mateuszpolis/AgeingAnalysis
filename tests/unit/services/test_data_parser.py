@@ -235,6 +235,7 @@ class TestGetReferenceChannelData:
         result = self.parser._get_reference_channel_data(df, 0, 1)
 
         # Should return the slice around the first peak (position 300)
+        # The peak should remain at its original position 300
         peak_idx = result.idxmax()
         assert 280 < peak_idx < 320
 
@@ -291,7 +292,7 @@ class TestGetReferenceChannelData:
         result = self.parser._get_reference_channel_data(df, 0, 1)
 
         # Combined signal should have peaks at [100, 80]
-        # First peak should be at position 200
+        # First peak should be at position 200 (original position)
         peak_idx = result.idxmax()
         assert 180 < peak_idx < 220
 
@@ -307,11 +308,13 @@ class TestGetReferenceChannelData:
 
         result = self.parser._get_reference_channel_data(df, 0, 1)
 
-        # Check that the result index is a subset of the original index
-        # Note: After cutting first 50 bins, the available range is shifted
-        assert all(idx in custom_index for idx in result.index)
-        assert min(result.index) >= 1050  # After cutting first 50 bins
-        assert max(result.index) < 2000
+        # With the new implementation, we maintain the original data length
+        # and place the selected region at the correct position with zeros elsewhere
+        assert min(result.index) == 0
+        assert max(result.index) == len(result) - 1
+        assert len(result.index) == len(result)
+        # The result should have the same length as the original data
+        assert len(result) == len(df)
 
 
 class TestParseAndProcessFile:
