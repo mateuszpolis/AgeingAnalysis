@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.7.0...v1.8.0) (2025-07-17)
+
+
+### Features
+
+* add ageing factor selection to grid visualization ([1bb2263](https://github.com/mateuszpolis/AgeingAnalysis/commit/1bb2263aebc24db820b173e773312f5d60e988d5))
+
 # [1.7.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.6.0...v1.7.0) (2025-07-17)
 
 
