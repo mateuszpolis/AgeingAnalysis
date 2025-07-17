@@ -164,10 +164,10 @@ class TestSaveResults:
         mock_config.to_dict.return_value = {"datasets": []}
 
         with patch("ageing_analysis.utils.save_results.datetime") as mock_datetime:
-            mock_datetime.now.return_value.strftime.return_value = "20220101_120000"
-            mock_datetime.now.return_value.isoformat.return_value = (
-                "2022-01-01T12:00:00"
-            )
+            mock_now = Mock()
+            mock_now.strftime.return_value = "20220101_120000"
+            mock_now.isoformat.return_value = "2022-01-01T12:00:00"
+            mock_datetime.now.return_value = mock_now
 
             result_path = save_results(mock_config, include_total_signal_data=True)
 

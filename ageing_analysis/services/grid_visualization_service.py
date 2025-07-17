@@ -1,7 +1,6 @@
 """Grid Visualization Service for Ageing Analysis."""
 
 import csv
-import importlib.resources
 import logging
 import re
 from pathlib import Path
@@ -49,7 +48,7 @@ def normalize_pm_channel(pm: str, channel: str) -> str:
 class GridVisualizationService:
     """Service for handling grid visualizations of ageing analysis results."""
 
-    def __init__(self, mappings_dir: str = None):
+    def __init__(self, mappings_dir: Optional[str] = None):
         """Initialize the GridVisualizationService.
 
         Args:
@@ -82,25 +81,42 @@ class GridVisualizationService:
         else:
             # Use package resources
             try:
-                mappings_path = importlib.resources.files(
-                    "ageing_analysis.grid_visualization_mappings"
-                )
-                for csv_file in mappings_path.iterdir():
-                    if csv_file.name.endswith(".csv"):
-                        try:
-                            mapping_info = self._load_mapping_file_from_resource(
-                                csv_file.name
+                # Use contents() for Python 3.8 compatibility
+                import importlib.resources as resources
+
+                try:
+                    # Try the newer API first (Python 3.9+)
+                    mappings_path = resources.files(
+                        "ageing_analysis.grid_visualization_mappings"
+                    )
+                    csv_files = [
+                        f for f in mappings_path.iterdir() if f.name.endswith(".csv")
+                    ]
+                except AttributeError:
+                    # Fallback to older API (Python 3.8)
+                    csv_files = resources.contents(
+                        "ageing_analysis.grid_visualization_mappings"
+                    )
+                    csv_files = [f for f in csv_files if f.endswith(".csv")]
+
+                for csv_file in csv_files:
+                    try:
+                        mapping_info = self._load_mapping_file_from_resource(
+                            csv_file.name if hasattr(csv_file, "name") else csv_file
+                        )
+                        if mapping_info:
+                            file_stem = (
+                                csv_file.stem
+                                if hasattr(csv_file, "stem")
+                                else csv_file.replace(".csv", "")
                             )
-                            if mapping_info:
-                                self.mappings_cache[csv_file.stem] = mapping_info
-                                logger.info(
-                                    f"Loaded mapping: {csv_file.stem} with"
-                                    f" {len(mapping_info['mapping'])} channels"
-                                )
-                        except Exception as e:
-                            logger.error(
-                                f"Failed to load mapping file {csv_file.name}: {e}"
+                            self.mappings_cache[file_stem] = mapping_info
+                            logger.info(
+                                f"Loaded mapping: {file_stem} with"
+                                f" {len(mapping_info['mapping'])} channels"
                             )
+                    except Exception as e:
+                        logger.error(f"Failed to load mapping file {csv_file}: {e}")
             except Exception as e:
                 logger.error(f"Failed to access package resources: {e}")
 
@@ -164,31 +180,69 @@ class GridVisualizationService:
         channel_count = 0
 
         try:
-            with importlib.resources.open_text(
-                "ageing_analysis.grid_visualization_mappings", filename
-            ) as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    pm_channel = row.get("PM:Channel", "").strip()
-                    if pm_channel:
-                        try:
-                            row_pos = float(row.get("row", 0))
-                            col_pos = float(row.get("col", 0))
+            # Use files() API for better compatibility
+            import importlib.resources as resources
 
-                            # Split PM:Channel and normalize
-                            if ":" in pm_channel:
-                                pm, channel = pm_channel.split(":", 1)
-                                normalized_key = normalize_pm_channel(pm, channel)
-                            else:
-                                # If no colon, assume it's just a channel name
-                                normalized_key = normalize_pm_channel("", pm_channel)
+            try:
+                # Try the newer API first (Python 3.9+)
+                mappings_path = resources.files(
+                    "ageing_analysis.grid_visualization_mappings"
+                )
+                file_path = mappings_path / filename
+                with file_path.open(encoding="utf-8") as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        pm_channel = row.get("PM:Channel", "").strip()
+                        if pm_channel:
+                            try:
+                                row_pos = float(row.get("row", 0))
+                                col_pos = float(row.get("col", 0))
 
-                            mapping[normalized_key] = (row_pos, col_pos)
-                            channel_count += 1
-                        except ValueError as e:
-                            logger.warning(
-                                f"Invalid position values in {filename}: {e}"
-                            )
+                                # Split PM:Channel and normalize
+                                if ":" in pm_channel:
+                                    pm, channel = pm_channel.split(":", 1)
+                                    normalized_key = normalize_pm_channel(pm, channel)
+                                else:
+                                    # If no colon, assume it's just a channel name
+                                    normalized_key = normalize_pm_channel(
+                                        "", pm_channel
+                                    )
+
+                                mapping[normalized_key] = (row_pos, col_pos)
+                                channel_count += 1
+                            except ValueError as e:
+                                logger.warning(
+                                    f"Invalid position values in {filename}: {e}"
+                                )
+            except AttributeError:
+                # Fallback to older API (Python 3.8)
+                with resources.open_text(
+                    "ageing_analysis.grid_visualization_mappings", filename
+                ) as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        pm_channel = row.get("PM:Channel", "").strip()
+                        if pm_channel:
+                            try:
+                                row_pos = float(row.get("row", 0))
+                                col_pos = float(row.get("col", 0))
+
+                                # Split PM:Channel and normalize
+                                if ":" in pm_channel:
+                                    pm, channel = pm_channel.split(":", 1)
+                                    normalized_key = normalize_pm_channel(pm, channel)
+                                else:
+                                    # If no colon, assume it's just a channel name
+                                    normalized_key = normalize_pm_channel(
+                                        "", pm_channel
+                                    )
+
+                                mapping[normalized_key] = (row_pos, col_pos)
+                                channel_count += 1
+                            except ValueError as e:
+                                logger.warning(
+                                    f"Invalid position values in {filename}: {e}"
+                                )
 
             return {
                 "mapping": mapping,
@@ -292,7 +346,7 @@ class GridVisualizationService:
         return sorted(dates)
 
     def _extract_ageing_factors(
-        self, results_data: Dict, selected_date: str = None
+        self, results_data: Dict, selected_date: Optional[str] = None
     ) -> Dict[str, float]:
         """Extract normalized Gaussian ageing factors from results.
 
