@@ -29,6 +29,7 @@ class GridVisualizationTab:
         self.frame = ttk.Frame(self.parent)
         self.mapping_var = tk.StringVar()
         self.date_var = tk.StringVar()
+        self.ageing_factor_var = tk.StringVar(value="normalized_gauss_ageing_factor")
         self.colormap_var = tk.StringVar(value="RdYlGn")
         self.vmin_var = tk.DoubleVar(value=0.5)
         self.vmax_var = tk.DoubleVar(value=1.5)
@@ -40,6 +41,7 @@ class GridVisualizationTab:
         self._create_widgets()
         self._populate_mapping_dropdown()
         self._populate_date_dropdown()
+        self._populate_ageing_factor_dropdown()
 
     def _create_widgets(self):
         """Create the GUI widgets."""
@@ -86,6 +88,28 @@ class GridVisualizationTab:
         # Date info
         self.date_info_label = ttk.Label(date_frame, text="")
         self.date_info_label.pack(side=tk.LEFT, padx=(10, 0))
+
+        # Ageing factor selection
+        ageing_factor_frame = ttk.Frame(selection_frame)
+        ageing_factor_frame.pack(fill=tk.X, pady=(5, 0))
+
+        ttk.Label(ageing_factor_frame, text="Ageing Factor:").pack(
+            side=tk.LEFT, padx=(0, 5)
+        )
+        self.ageing_factor_combobox = ttk.Combobox(
+            ageing_factor_frame,
+            textvariable=self.ageing_factor_var,
+            state="readonly",
+            width=30,
+        )
+        self.ageing_factor_combobox.pack(side=tk.LEFT, padx=(0, 10))
+        self.ageing_factor_combobox.bind(
+            "<<ComboboxSelected>>", self._on_ageing_factor_selected
+        )
+
+        # Ageing factor info
+        self.ageing_factor_info_label = ttk.Label(ageing_factor_frame, text="")
+        self.ageing_factor_info_label.pack(side=tk.LEFT, padx=(10, 0))
 
         # Visualization options
         options_frame = ttk.Frame(control_frame)
@@ -223,6 +247,37 @@ class GridVisualizationTab:
             self.date_combobox["values"] = ["Error loading dates"]
             self.date_combobox.set("Error loading dates")
 
+    def _populate_ageing_factor_dropdown(self):
+        """Populate the ageing factor dropdown with available options."""
+        ageing_factors = [
+            ("normalized_gauss_ageing_factor", "Normalized Gaussian"),
+            ("normalized_weighted_ageing_factor", "Normalized Weighted"),
+            ("gaussian_ageing_factor", "Gaussian"),
+            ("weighted_ageing_factor", "Weighted"),
+        ]
+
+        self.ageing_factor_combobox["values"] = [
+            display_name for _, display_name in ageing_factors
+        ]
+        self.ageing_factor_combobox.set("Normalized Gaussian")  # Default
+        self._update_ageing_factor_info()
+
+    def _update_ageing_factor_info(self):
+        """Update the ageing factor information display."""
+        selected_factor = self.ageing_factor_var.get()
+        if selected_factor:
+            # Get display name for the selected factor
+            factor_display_names = {
+                "normalized_gauss_ageing_factor": "Normalized Gaussian",
+                "normalized_weighted_ageing_factor": "Normalized Weighted",
+                "gaussian_ageing_factor": "Gaussian",
+                "weighted_ageing_factor": "Weighted",
+            }
+            display_name = factor_display_names.get(selected_factor, selected_factor)
+            self.ageing_factor_info_label.config(text=f"Type: {display_name}")
+        else:
+            self.ageing_factor_info_label.config(text="")
+
     def _update_mapping_info(self):
         """Update the mapping information display."""
         selected_mapping = self.mapping_var.get()
@@ -273,6 +328,23 @@ class GridVisualizationTab:
     def _on_date_selected(self, event=None):
         """Handle date selection change."""
         self._update_date_info()
+        if self.results_data:
+            self._update_visualization()
+
+    def _on_ageing_factor_selected(self, event=None):
+        """Handle ageing factor selection change."""
+        # Map display name back to internal name
+        display_name = self.ageing_factor_combobox.get()
+        factor_mapping = {
+            "Normalized Gaussian": "normalized_gauss_ageing_factor",
+            "Normalized Weighted": "normalized_weighted_ageing_factor",
+            "Gaussian": "gaussian_ageing_factor",
+            "Weighted": "weighted_ageing_factor",
+        }
+        self.ageing_factor_var.set(
+            factor_mapping.get(display_name, "normalized_gauss_ageing_factor")
+        )
+        self._update_ageing_factor_info()
         if self.results_data:
             self._update_visualization()
 
@@ -403,7 +475,7 @@ class GridVisualizationTab:
                 return
 
             ageing_factors = self.grid_service._extract_ageing_factors(
-                self.results_data, selected_date
+                self.results_data, selected_date, self.ageing_factor_var.get()
             )
 
             # Clear the current figure
@@ -420,6 +492,7 @@ class GridVisualizationTab:
                 self.vmax_var.get(),
                 selected_mapping,
                 selected_date,
+                self.ageing_factor_var.get(),
             )
 
             # Update the canvas
@@ -461,6 +534,7 @@ class GridVisualizationTab:
         vmax,
         mapping_name,
         selected_date,
+        ageing_factor_type,
     ):
         """Create the grid plot on the given axes.
 
@@ -473,6 +547,7 @@ class GridVisualizationTab:
             vmax: Maximum value for color scaling
             mapping_name: Name of the mapping for display
             selected_date: Selected date for the visualization
+            ageing_factor_type: Type of ageing factor being displayed
         """
         import matplotlib.pyplot as plt
 
@@ -528,7 +603,14 @@ class GridVisualizationTab:
             ax.text(x, y, text, ha="center", va="center", color=text_color, fontsize=8)
 
         # Set title and labels
-        title = f"Normalized Gaussian Ageing Factors - {mapping_name} ({selected_date})"
+        factor_display_names = {
+            "normalized_gauss_ageing_factor": "Normalized Gaussian",
+            "normalized_weighted_ageing_factor": "Normalized Weighted",
+            "gaussian_ageing_factor": "Gaussian",
+            "weighted_ageing_factor": "Weighted",
+        }
+        display_name = factor_display_names.get(ageing_factor_type, ageing_factor_type)
+        title = f"{display_name} Ageing Factors - {mapping_name} ({selected_date})"
         ax.set_title(title, fontsize=14, fontweight="bold")
 
         # Set axis limits with padding
@@ -549,7 +631,7 @@ class GridVisualizationTab:
             plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=vmin, vmax=vmax)),
             ax=ax,
         )
-        cbar.set_label("Normalized Gaussian Ageing Factor")
+        cbar.set_label(f"{display_name} Ageing Factor")
 
         # Invert y-axis to match original grid layout
         ax.invert_yaxis()

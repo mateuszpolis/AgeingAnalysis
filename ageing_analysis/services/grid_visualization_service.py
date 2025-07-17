@@ -292,6 +292,7 @@ class GridVisualizationService:
         colormap: str = "RdYlGn",
         vmin: float = 0.5,
         vmax: float = 1.5,
+        ageing_factor_type: str = "normalized_gauss_ageing_factor",
     ) -> Optional[Figure]:
         """Create a grid visualization using the specified mapping and results data.
 
@@ -301,6 +302,7 @@ class GridVisualizationService:
             colormap: Matplotlib colormap name
             vmin: Minimum value for color scaling
             vmax: Maximum value for color scaling
+            ageing_factor_type: Type of ageing factor to display
 
         Returns:
             Matplotlib Figure with the grid visualization or None if failed
@@ -312,7 +314,9 @@ class GridVisualizationService:
 
         try:
             # Extract ageing factors from results data
-            ageing_factors = self._extract_ageing_factors(results_data)
+            ageing_factors = self._extract_ageing_factors(
+                results_data, ageing_factor_type=ageing_factor_type
+            )
 
             # Create the visualization
             fig = self._create_grid_figure(
@@ -322,6 +326,7 @@ class GridVisualizationService:
                 vmin,
                 vmax,
                 mapping_name,
+                ageing_factor_type,
             )
 
             return fig
@@ -346,13 +351,17 @@ class GridVisualizationService:
         return sorted(dates)
 
     def _extract_ageing_factors(
-        self, results_data: Dict, selected_date: Optional[str] = None
+        self,
+        results_data: Dict,
+        selected_date: Optional[str] = None,
+        ageing_factor_type: str = "normalized_gauss_ageing_factor",
     ) -> Dict[str, float]:
-        """Extract normalized Gaussian ageing factors from results.
+        """Extract ageing factors from results.
 
         Args:
             results_data: Analysis results data
             selected_date: Date to extract factors from. If None, uses last dataset.
+            ageing_factor_type: Type of ageing factor to extract
 
         Returns:
             Dictionary mapping PM:Channel to ageing factor
@@ -383,7 +392,7 @@ class GridVisualizationService:
                 # Extract the ageing factor
                 ageing_factors = channel.get("ageing_factors", {})
                 if isinstance(ageing_factors, dict):
-                    factor = ageing_factors.get("normalized_gauss_ageing_factor")
+                    factor = ageing_factors.get(ageing_factor_type)
                     if factor is not None and not isinstance(factor, str):
                         try:
                             factors[normalized_key] = float(factor)
@@ -397,7 +406,7 @@ class GridVisualizationService:
                         factors[normalized_key] = 1.0  # Default value
 
         logger.info(
-            f"Extracted {len(factors)} ageing factors for date:"
+            f"Extracted {len(factors)} {ageing_factor_type} factors for date:"
             f" {target_dataset.get('date')}"
         )
         return factors
@@ -410,6 +419,7 @@ class GridVisualizationService:
         vmin: float,
         vmax: float,
         mapping_name: str,
+        ageing_factor_type: str = "normalized_gauss_ageing_factor",
     ) -> Figure:
         """Create the actual grid visualization figure.
 
@@ -420,6 +430,7 @@ class GridVisualizationService:
             vmin: Minimum value for color scaling
             vmax: Maximum value for color scaling
             mapping_name: Name of the mapping for display
+            ageing_factor_type: Type of ageing factor being displayed
 
         Returns:
             Matplotlib Figure with the grid visualization
@@ -479,7 +490,14 @@ class GridVisualizationService:
             ax.text(x, y, text, ha="center", va="center", color=text_color, fontsize=8)
 
         # Set title and labels
-        title = f"Normalized Gaussian Ageing Factors - {mapping_name}"
+        factor_display_names = {
+            "normalized_gauss_ageing_factor": "Normalized Gaussian",
+            "normalized_weighted_ageing_factor": "Normalized Weighted",
+            "gaussian_ageing_factor": "Gaussian",
+            "weighted_ageing_factor": "Weighted",
+        }
+        display_name = factor_display_names.get(ageing_factor_type, ageing_factor_type)
+        title = f"{display_name} Ageing Factors - {mapping_name}"
         ax.set_title(title, fontsize=14, fontweight="bold")
 
         # Set axis limits with padding
@@ -500,7 +518,7 @@ class GridVisualizationService:
             plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=vmin, vmax=vmax)),
             ax=ax,
         )
-        cbar.set_label("Normalized Gaussian Ageing Factor")
+        cbar.set_label(f"{display_name} Ageing Factor")
 
         # Invert y-axis to match original grid layout
         ax.invert_yaxis()
