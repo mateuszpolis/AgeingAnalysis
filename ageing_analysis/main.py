@@ -558,12 +558,12 @@ class AgeingAnalysisApp:
             # Step 3: Calculate reference means for all datasets
             progress.add_log_message("Calculating reference means...")
             for i, dataset in enumerate(self.config.datasets):
+                progress.add_log_message(
+                    f"Calculating reference means for {dataset.date}..."
+                )
                 ref_service = ReferenceChannelService(dataset)
-                (
-                    ref_gaussian_mean,
-                    ref_weighted_mean,
-                ) = ref_service.calculate_reference_means()
-                dataset.set_reference_means(ref_gaussian_mean, ref_weighted_mean)
+                ref_service.calculate_reference_means()
+                progress.add_log_message(f"Reference means for {dataset.date} set")
                 progress.update_progress(
                     60 + (i + 1) / len(self.config.datasets) * 9,
                     f"Calculated reference means for {dataset.date}",
@@ -571,6 +571,7 @@ class AgeingAnalysisApp:
 
             progress.update_progress(70, "Calculating ageing factors...")
 
+            # Step 4: Calculate ageing factors for all datasets
             for i, dataset in enumerate(self.config.datasets):
                 progress.add_log_message(
                     f"Calculating ageing factors for {dataset.date}..."

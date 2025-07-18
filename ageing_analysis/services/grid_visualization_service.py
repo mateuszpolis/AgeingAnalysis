@@ -421,8 +421,8 @@ class GridVisualizationService:
         mapping_name: str,
         results_data: Dict,
         colormap: str = "RdYlGn",
-        vmin: float = 0.5,
-        vmax: float = 1.5,
+        vmin: float = 0.4,
+        vmax: float = 1.2,
         ageing_factor_type: str = "normalized_gauss_ageing_factor",
         selected_date: Optional[str] = None,
     ) -> Optional[Figure]:

@@ -18,7 +18,7 @@ class ReferenceChannelService:
         self.dataset = dataset
         self.reference_module = dataset.get_reference_module()
 
-    def calculate_reference_means(self):
+    def calculate_reference_means(self) -> None:
         """Calculate the reference means across reference channels.
 
         Raises:
@@ -31,7 +31,11 @@ class ReferenceChannelService:
         weighted_means = []
 
         # Extract Gaussian and weighted means from the reference channels
+        logger.info(
+            f"Extracting reference means from reference module: {self.reference_module}"
+        )
         for channel in self.reference_module.get_reference_channels():
+            logger.info(f"Extracting reference means from reference channel: {channel}")
             gaussian_mean = channel.get_gaussian_mean()
             weighted_mean = channel.get_weighted_mean()
             if (

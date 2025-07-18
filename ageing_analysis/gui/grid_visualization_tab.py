@@ -31,8 +31,8 @@ class GridVisualizationTab:
         self.date_var = tk.StringVar()
         self.ageing_factor_var = tk.StringVar(value="normalized_gauss_ageing_factor")
         self.colormap_var = tk.StringVar(value="RdYlGn")
-        self.vmin_var = tk.DoubleVar(value=0.5)
-        self.vmax_var = tk.DoubleVar(value=1.5)
+        self.vmin_var = tk.DoubleVar(value=0.4)
+        self.vmax_var = tk.DoubleVar(value=1.2)
 
         # Plot components
         self.fig = None
