@@ -55,7 +55,7 @@ class DataNormalizer:
         logger.info("Successfully calculated divisors")
         return divisors
 
-    def normalize_data(self):
+    def normalize_data(self) -> None:
         """Normalize the ageing calculation results."""
         divisors = self._get_divisors(self.config.datasets[0])
 

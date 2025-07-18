@@ -10,22 +10,15 @@ logger = logging.getLogger(__name__)
 class AgeingCalculationService:
     """Service to calculate ageing factors for dataset channels."""
 
-    def __init__(
-        self,
-        dataset: Dataset,
-        reference_gaussian_mean: float = 0,
-        reference_weighted_mean: float = 0,
-    ):
+    def __init__(self, dataset: Dataset):
         """Initialize the ageing calculation service.
 
         Args:
             dataset: The dataset to process.
-            reference_gaussian_mean: Reference Gaussian mean for normalization.
-            reference_weighted_mean: Reference weighted mean for normalization.
         """
         self.dataset = dataset
-        self.reference_gaussian_mean = reference_gaussian_mean
-        self.reference_weighted_mean = reference_weighted_mean
+        self.reference_gaussian_mean = dataset.get_reference_gaussian_mean()
+        self.reference_weighted_mean = dataset.get_reference_weighted_mean()
 
     def calculate_ageing_factors(self):
         """Calculate the ageing factors for all channels in the dataset."""

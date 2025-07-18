@@ -555,25 +555,27 @@ class AgeingAnalysisApp:
 
             progress.update_progress(60, "Calculating reference means...")
 
-            # Step 3: Calculate reference means for first dataset
-            first_dataset = self.config.datasets[0]
+            # Step 3: Calculate reference means for all datasets
             progress.add_log_message("Calculating reference means...")
-            ref_service = ReferenceChannelService(first_dataset)
-            ref_service.calculate_reference_means()
+            for i, dataset in enumerate(self.config.datasets):
+                ref_service = ReferenceChannelService(dataset)
+                (
+                    ref_gaussian_mean,
+                    ref_weighted_mean,
+                ) = ref_service.calculate_reference_means()
+                dataset.set_reference_means(ref_gaussian_mean, ref_weighted_mean)
+                progress.update_progress(
+                    60 + (i + 1) / len(self.config.datasets) * 9,
+                    f"Calculated reference means for {dataset.date}",
+                )
 
             progress.update_progress(70, "Calculating ageing factors...")
-
-            # Step 4: Calculate ageing factors for all datasets
-            ref_gaussian = first_dataset.get_reference_gaussian_mean()
-            ref_weighted = first_dataset.get_reference_weighted_mean()
 
             for i, dataset in enumerate(self.config.datasets):
                 progress.add_log_message(
                     f"Calculating ageing factors for {dataset.date}..."
                 )
-                ageing_service = AgeingCalculationService(
-                    dataset, ref_gaussian, ref_weighted
-                )
+                ageing_service = AgeingCalculationService(dataset)
                 ageing_service.calculate_ageing_factors()
                 progress.update_progress(
                     70 + (i + 1) / len(self.config.datasets) * 19,
@@ -645,21 +647,33 @@ class AgeingAnalysisApp:
                     f"({i+1}/{len(self.config.datasets)})"
                 )
 
-            # Step 3: Calculate reference means for first dataset
+            # Step 3: Calculate reference means for all datasets
             logger.info("Calculating reference means...")
-            ref_service = ReferenceChannelService(self.config.datasets[0])
-            (
-                ref_gaussian_mean,
-                ref_weighted_mean,
-            ) = ref_service.calculate_reference_means()
-            self.config.datasets[0].set_reference_means(
-                ref_gaussian_mean, ref_weighted_mean
-            )
+            for i, dataset in enumerate(self.config.datasets):
+                logger.info(
+                    f"Calculating reference means for dataset {dataset.date}..."
+                )
+                ref_service = ReferenceChannelService(dataset)
+                (
+                    ref_gaussian_mean,
+                    ref_weighted_mean,
+                ) = ref_service.calculate_reference_means()
+                dataset.set_reference_means(ref_gaussian_mean, ref_weighted_mean)
+                logger.info(
+                    f"Calculated reference means for {dataset.date} "
+                    f"({i+1}/{len(self.config.datasets)})"
+                )
 
             # Step 4: Calculate ageing factors for all datasets
             logger.info("Calculating ageing factors...")
-            ageing_service = AgeingCalculationService(self.config)
-            ageing_service.calculate_all_ageing_factors()
+            for i, dataset in enumerate(self.config.datasets):
+                logger.info(f"Calculating ageing factors for dataset {dataset.date}...")
+                ageing_service = AgeingCalculationService(dataset)
+                ageing_service.calculate_ageing_factors()
+                logger.info(
+                    f"Calculated ageing factors for {dataset.date} "
+                    f"({i+1}/{len(self.config.datasets)})"
+                )
 
             # Step 5: Normalize ageing factors
             logger.info("Normalizing ageing factors...")
