@@ -1,3 +1,10 @@
+## [1.8.8](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.8.7...v1.8.8) (2025-07-18)
+
+
+### Bug Fixes
+
+* improve logging and parameter adjustments in AgeingAnalysisApp and GridVisualizationService ([1cb9727](https://github.com/mateuszpolis/AgeingAnalysis/commit/1cb9727f62839c32f5f4c37b2fc0d4658ee5b0e5))
+
 ## [1.8.7](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.8.6...v1.8.7) (2025-07-18)
 
 
