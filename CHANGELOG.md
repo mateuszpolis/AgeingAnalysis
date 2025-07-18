@@ -1,3 +1,10 @@
+## [1.8.1](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.8.0...v1.8.1) (2025-07-18)
+
+
+### Bug Fixes
+
+* improve progress updates and tooltip information in analysis ([02d1412](https://github.com/mateuszpolis/AgeingAnalysis/commit/02d1412feceebb6fa05dbc8377b57d5ebf4cface))
+
 # [1.8.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.7.0...v1.8.0) (2025-07-17)
 
 
