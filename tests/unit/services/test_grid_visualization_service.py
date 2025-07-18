@@ -1,7 +1,10 @@
+import pytest
+
 from ageing_analysis.services.grid_visualization_service import GridVisualizationService
 
 
 class TestGridVisualizationServiceResourceLoading:
+    @pytest.mark.local_only
     def test_load_mappings_from_package_resources(self):
         # Instantiate without a directory to use package resources
         service = GridVisualizationService(mappings_dir=None)

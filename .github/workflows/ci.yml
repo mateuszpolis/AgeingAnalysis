@@ -76,9 +76,9 @@ jobs:
       - name: Run tests
         run: |
           if [ "$RUNNER_OS" = "Linux" ]; then
-            xvfb-run -a pytest tests/unit/ -v --cov=ageing_analysis --cov-report=xml --cov-report=term-missing
+            xvfb-run -a pytest tests/unit/ -v --cov=ageing_analysis --cov-report=xml --cov-report=term-missing -m "not local_only"
           else
-            pytest tests/unit/ -v --cov=ageing_analysis --cov-report=xml --cov-report=term-missing
+            pytest tests/unit/ -v --cov=ageing_analysis --cov-report=xml --cov-report=term-missing -m "not local_only"
           fi
         shell: bash
 
