@@ -1,3 +1,10 @@
+## [1.8.3](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.8.2...v1.8.3) (2025-07-18)
+
+
+### Bug Fixes
+
+* improve error handling and logging in GridVisualizationService ([f9ade8e](https://github.com/mateuszpolis/AgeingAnalysis/commit/f9ade8ea435e4ba5b4f645efa07dc4fa8155ffe2))
+
 ## [1.8.2](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.8.1...v1.8.2) (2025-07-18)
 
 
