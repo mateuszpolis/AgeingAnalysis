@@ -1,3 +1,10 @@
+## [1.8.6](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.8.5...v1.8.6) (2025-07-18)
+
+
+### Bug Fixes
+
+* enhance fallback mechanism and add mock mappings in GridVisualizationService ([16ca756](https://github.com/mateuszpolis/AgeingAnalysis/commit/16ca7561f824ac140a0badeaa3cae91e924168a5))
+
 ## [1.8.5](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.8.4...v1.8.5) (2025-07-18)
 
 
