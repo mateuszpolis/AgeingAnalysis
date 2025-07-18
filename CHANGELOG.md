@@ -1,3 +1,10 @@
+## [1.8.2](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.8.1...v1.8.2) (2025-07-18)
+
+
+### Bug Fixes
+
+* enhance grid visualization with date comparison ([42ef4dd](https://github.com/mateuszpolis/AgeingAnalysis/commit/42ef4dde984d69976d86e670cae2d410e2169f67))
+
 ## [1.8.1](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.8.0...v1.8.1) (2025-07-18)
 
 
