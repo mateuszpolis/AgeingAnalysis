@@ -164,6 +164,41 @@ class GridVisualizationService:
                 except Exception as fallback_error:
                     logger.error(f"Fallback also failed: {fallback_error}")
 
+                # Second fallback: try to find mappings in the current working directory
+                if not self.mappings_cache:
+                    try:
+                        import os
+
+                        current_dir = os.getcwd()
+                        mappings_dir = os.path.join(
+                            current_dir,
+                            "ageing_analysis",
+                            "grid_visualization_mappings",
+                        )
+                        if os.path.exists(mappings_dir):
+                            logger.info(
+                                f"Trying second fallback mappings directory: "
+                                f"{mappings_dir}"
+                            )
+                            for csv_file in os.listdir(mappings_dir):
+                                if csv_file.endswith(".csv"):
+                                    file_path = os.path.join(mappings_dir, csv_file)
+                                    mapping_info = self._load_mapping_file_from_path(
+                                        Path(file_path)
+                                    )
+                                    if mapping_info:
+                                        file_stem = csv_file.replace(".csv", "")
+                                        self.mappings_cache[file_stem] = mapping_info
+                                        logger.info(
+                                            f"Loaded mapping (second fallback): "
+                                            f"{file_stem} with"
+                                            f" {len(mapping_info['mapping'])} channels"
+                                        )
+                    except Exception as second_fallback_error:
+                        logger.error(
+                            f"Second fallback also failed: {second_fallback_error}"
+                        )
+
     def _load_mapping_file_from_path(self, file_path: Path) -> Optional[Dict]:
         """Load a single mapping file from file system path and return mapping data.
 

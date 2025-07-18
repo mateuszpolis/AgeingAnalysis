@@ -163,15 +163,18 @@ class TestSaveResults:
         mock_config = Mock()
         mock_config.to_dict.return_value = {"datasets": []}
 
-        with patch(
-            "ageing_analysis.utils.save_results.datetime", autospec=True
-        ) as mock_datetime:
-            mock_now = Mock()
-            mock_now.strftime.return_value = "20220101_120000"
-            mock_now.isoformat.return_value = "2022-01-01T12:00:00"
-            mock_datetime.now.return_value = mock_now
+        # Use a different approach for Python 3.8 compatibility
+        with patch("builtins.open", create=True), patch("pathlib.Path.mkdir"), patch(
+            "pathlib.Path.exists", return_value=False
+        ):
+            # Mock datetime at the module level
+            with patch("ageing_analysis.utils.save_results.datetime") as mock_datetime:
+                mock_now = Mock()
+                mock_now.strftime.return_value = "20220101_120000"
+                mock_now.isoformat.return_value = "2022-01-01T12:00:00"
+                mock_datetime.now.return_value = mock_now
 
-            result_path = save_results(mock_config, include_total_signal_data=True)
+                result_path = save_results(mock_config, include_total_signal_data=True)
 
         # Verify the path contains the expected pattern
         assert "ageing_analysis_results" in result_path
