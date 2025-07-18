@@ -1,6 +1,7 @@
 """Grid Visualization Service for Ageing Analysis."""
 
 import csv
+import importlib
 import logging
 import re
 from pathlib import Path
@@ -92,12 +93,20 @@ class GridVisualizationService:
                     csv_files = [
                         f for f in mappings_path.iterdir() if f.name.endswith(".csv")
                     ]
+                    logger.debug(f"Found {len(csv_files)} CSV files using files() API")
                 except AttributeError:
                     # Fallback to older API (Python 3.8)
                     csv_files = resources.contents(
                         "ageing_analysis.grid_visualization_mappings"
                     )
                     csv_files = [f for f in csv_files if f.endswith(".csv")]
+                    logger.debug(
+                        f"Found {len(csv_files)} CSV files using contents() API"
+                    )
+
+                if not csv_files:
+                    logger.warning("No CSV files found in package resources")
+                    return
 
                 for csv_file in csv_files:
                     try:
@@ -119,6 +128,41 @@ class GridVisualizationService:
                         logger.error(f"Failed to load mapping file {csv_file}: {e}")
             except Exception as e:
                 logger.error(f"Failed to access package resources: {e}")
+                # Add more detailed error information for debugging
+                import sys
+
+                logger.error(f"Python version: {sys.version}")
+                logger.error(
+                    f"importlib.resources available: {hasattr(importlib, 'resources')}"
+                )
+
+                # Fallback: try to find mappings in the package directory
+                try:
+                    import os
+
+                    package_dir = os.path.dirname(__file__)
+                    mappings_dir = os.path.join(
+                        package_dir, "..", "grid_visualization_mappings"
+                    )
+                    if os.path.exists(mappings_dir):
+                        logger.info(
+                            f"Trying fallback mappings directory: {mappings_dir}"
+                        )
+                        for csv_file in os.listdir(mappings_dir):
+                            if csv_file.endswith(".csv"):
+                                file_path = os.path.join(mappings_dir, csv_file)
+                                mapping_info = self._load_mapping_file_from_path(
+                                    Path(file_path)
+                                )
+                                if mapping_info:
+                                    file_stem = csv_file.replace(".csv", "")
+                                    self.mappings_cache[file_stem] = mapping_info
+                                    logger.info(
+                                        f"Loaded mapping (fallback): {file_stem} with"
+                                        f" {len(mapping_info['mapping'])} channels"
+                                    )
+                except Exception as fallback_error:
+                    logger.error(f"Fallback also failed: {fallback_error}")
 
     def _load_mapping_file_from_path(self, file_path: Path) -> Optional[Dict]:
         """Load a single mapping file from file system path and return mapping data.
