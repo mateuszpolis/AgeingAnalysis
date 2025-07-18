@@ -1,3 +1,10 @@
+## [1.8.5](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.8.4...v1.8.5) (2025-07-18)
+
+
+### Bug Fixes
+
+* update test for save_results to verify filename pattern ([acd8bb2](https://github.com/mateuszpolis/AgeingAnalysis/commit/acd8bb2599be54a36accc04131ef1e56fd992758))
+
 ## [1.8.4](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.8.3...v1.8.4) (2025-07-18)
 
 
