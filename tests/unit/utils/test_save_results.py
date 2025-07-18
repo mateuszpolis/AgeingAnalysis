@@ -163,23 +163,24 @@ class TestSaveResults:
         mock_config = Mock()
         mock_config.to_dict.return_value = {"datasets": []}
 
-        # Use a different approach for Python 3.8 compatibility
+        # Mock file operations to avoid actual file creation
         with patch("builtins.open", create=True), patch("pathlib.Path.mkdir"), patch(
             "pathlib.Path.exists", return_value=False
         ):
-            # Mock datetime at the module level
-            with patch("ageing_analysis.utils.save_results.datetime") as mock_datetime:
-                mock_now = Mock()
-                mock_now.strftime.return_value = "20220101_120000"
-                mock_now.isoformat.return_value = "2022-01-01T12:00:00"
-                mock_datetime.now.return_value = mock_now
+            # Call the function without mocking datetime
+            result_path = save_results(mock_config, include_total_signal_data=True)
 
-                result_path = save_results(mock_config, include_total_signal_data=True)
-
-        # Verify the path contains the expected pattern
+        # Verify the path contains the expected pattern (without specific timestamp)
         assert "ageing_analysis_results" in result_path
-        assert "20220101_120000" in result_path
         assert result_path.endswith(".json")
+
+        # Verify the filename format (should contain timestamp pattern)
+        import re
+
+        timestamp_pattern = r"ageing_analysis_results_\d{8}_\d{6}\.json$"
+        assert re.search(
+            timestamp_pattern, result_path
+        ), f"Path {result_path} doesn't match expected pattern"
 
     def test_save_results_creates_directory(self, tmp_path):
         """Test that save_results creates the output directory if it doesn't exist."""
