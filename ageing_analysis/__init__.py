@@ -27,7 +27,7 @@ Usage:
     parser.process_all_files()
 """
 
-__version__ = "1.8.6"
+__version__ = "1.8.7"
 __author__ = "FIT Detector Team"
 
 # Core imports: entities, main app, services, and utilities

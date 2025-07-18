@@ -1,3 +1,10 @@
+## [1.8.7](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.8.6...v1.8.7) (2025-07-18)
+
+
+### Bug Fixes
+
+* **tests:** add local_only marker for selective test execution ([17b173c](https://github.com/mateuszpolis/AgeingAnalysis/commit/17b173c6467e1408cd1a474fe7043429483c53bb))
+
 ## [1.8.6](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.8.5...v1.8.6) (2025-07-18)
 
 
