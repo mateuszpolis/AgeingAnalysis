@@ -293,6 +293,7 @@ class GridVisualizationService:
         vmin: float = 0.5,
         vmax: float = 1.5,
         ageing_factor_type: str = "normalized_gauss_ageing_factor",
+        selected_date: Optional[str] = None,
     ) -> Optional[Figure]:
         """Create a grid visualization using the specified mapping and results data.
 
@@ -315,7 +316,7 @@ class GridVisualizationService:
         try:
             # Extract ageing factors from results data
             ageing_factors = self._extract_ageing_factors(
-                results_data, ageing_factor_type=ageing_factor_type
+                results_data, selected_date, ageing_factor_type
             )
 
             # Create the visualization
@@ -327,6 +328,8 @@ class GridVisualizationService:
                 vmax,
                 mapping_name,
                 ageing_factor_type,
+                selected_date,
+                results_data,
             )
 
             return fig
@@ -420,6 +423,8 @@ class GridVisualizationService:
         vmax: float,
         mapping_name: str,
         ageing_factor_type: str = "normalized_gauss_ageing_factor",
+        selected_date: Optional[str] = None,
+        results_data: Optional[Dict] = None,
     ) -> Figure:
         """Create the actual grid visualization figure.
 
@@ -431,6 +436,8 @@ class GridVisualizationService:
             vmax: Maximum value for color scaling
             mapping_name: Name of the mapping for display
             ageing_factor_type: Type of ageing factor being displayed
+            selected_date: Selected date for the visualization
+            results_data: Analysis results data for reference date extraction
 
         Returns:
             Matplotlib Figure with the grid visualization
@@ -489,7 +496,12 @@ class GridVisualizationService:
             text_color = "black" if 0.3 < value_normalized < 0.7 else "white"
             ax.text(x, y, text, ha="center", va="center", color=text_color, fontsize=8)
 
-        # Set title and labels
+        # Get reference date (first dataset is typically the reference)
+        reference_date = None
+        if results_data and results_data.get("datasets"):
+            reference_date = results_data["datasets"][0].get("date")
+
+        # Set title with date comparison
         factor_display_names = {
             "normalized_gauss_ageing_factor": "Normalized Gaussian",
             "normalized_weighted_ageing_factor": "Normalized Weighted",
@@ -497,7 +509,20 @@ class GridVisualizationService:
             "weighted_ageing_factor": "Weighted",
         }
         display_name = factor_display_names.get(ageing_factor_type, ageing_factor_type)
-        title = f"{display_name} Ageing Factors - {mapping_name}"
+
+        # Main title with date comparison
+        if selected_date and reference_date and reference_date != selected_date:
+            title = (
+                f"{display_name} Ageing Factors - {mapping_name}\n"
+                f"{selected_date} vs {reference_date}"
+            )
+        elif selected_date:
+            title = (
+                f"{display_name} Ageing Factors - {mapping_name}\n" f"{selected_date}"
+            )
+        else:
+            title = f"{display_name} Ageing Factors - {mapping_name}"
+
         ax.set_title(title, fontsize=14, fontweight="bold")
 
         # Set axis limits with padding

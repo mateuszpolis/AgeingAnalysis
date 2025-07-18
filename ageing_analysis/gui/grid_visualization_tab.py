@@ -602,7 +602,12 @@ class GridVisualizationTab:
             text_color = "black" if 0.3 < value_normalized < 0.7 else "white"
             ax.text(x, y, text, ha="center", va="center", color=text_color, fontsize=8)
 
-        # Set title and labels
+        # Get reference date (first dataset is typically the reference)
+        reference_date = None
+        if self.results_data and self.results_data.get("datasets"):
+            reference_date = self.results_data["datasets"][0].get("date")
+
+        # Set title with date comparison
         factor_display_names = {
             "normalized_gauss_ageing_factor": "Normalized Gaussian",
             "normalized_weighted_ageing_factor": "Normalized Weighted",
@@ -610,7 +615,18 @@ class GridVisualizationTab:
             "weighted_ageing_factor": "Weighted",
         }
         display_name = factor_display_names.get(ageing_factor_type, ageing_factor_type)
-        title = f"{display_name} Ageing Factors - {mapping_name} ({selected_date})"
+
+        # Main title with date comparison
+        if reference_date and reference_date != selected_date:
+            title = (
+                f"{display_name} Ageing Factors - {mapping_name}\n"
+                f"{selected_date} vs {reference_date}"
+            )
+        else:
+            title = (
+                f"{display_name} Ageing Factors - {mapping_name}\n" f"{selected_date}"
+            )
+
         ax.set_title(title, fontsize=14, fontweight="bold")
 
         # Set axis limits with padding
