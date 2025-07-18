@@ -240,14 +240,11 @@ class GaussianFitService:
                 )
             return 0
 
-    def calculate_weighted_mean(
-        self, data_series: pd.Series, is_reference: bool = False
-    ) -> float:
+    def calculate_weighted_mean(self, data_series: pd.Series) -> float:
         """Calculate the weighted mean of the data series.
 
         Args:
             data_series: Summed signal data for a specific channel pair.
-            is_reference: Whether the data belongs to a reference channel.
 
         Returns:
             The weighted mean of the data series, or NaN if calculation fails.
@@ -257,8 +254,6 @@ class GaussianFitService:
             return 0
 
         x_data = np.arange(len(data_series))
-        if is_reference:
-            x_data += 100  # Adjust x_data for reference channels
         values = data_series.values
 
         return float(np.sum(x_data * values) / np.sum(values))
@@ -288,14 +283,12 @@ class GaussianFitService:
                     )
 
                 # Try weighted mean
-                weighted_mean = self.calculate_weighted_mean(channel.data, is_reference)
+                weighted_mean = self.calculate_weighted_mean(channel.data)
                 if weighted_mean == 0 and channel.noise_data is not None:
                     logger.warning(
                         "Retrying weighted mean calculation with noise data."
                     )
-                    weighted_mean = self.calculate_weighted_mean(
-                        channel.noise_data, is_reference
-                    )
+                    weighted_mean = self.calculate_weighted_mean(channel.noise_data)
 
                 channel.set_means(gaussian_mean, weighted_mean)
 

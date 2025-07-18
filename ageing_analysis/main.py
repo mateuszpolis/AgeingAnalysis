@@ -533,7 +533,8 @@ class AgeingAnalysisApp:
                 )
                 parser.process_all_files()
                 progress.update_progress(
-                    10 + (i + 1) * 15, f"Parsed dataset {dataset.date}"
+                    10 + (i + 1) / len(self.config.datasets) * 29,
+                    f"Parsed dataset {dataset.date}",
                 )
 
             progress.update_progress(40, "Fitting Gaussian distributions...")
@@ -548,7 +549,8 @@ class AgeingAnalysisApp:
                 )
                 gaussian_service.process_all_modules()
                 progress.update_progress(
-                    40 + (i + 1) * 10, f"Fitted Gaussians for {dataset.date}"
+                    40 + (i + 1) / len(self.config.datasets) * 19,
+                    f"Fitted Gaussians for {dataset.date}",
                 )
 
             progress.update_progress(60, "Calculating reference means...")
@@ -574,7 +576,8 @@ class AgeingAnalysisApp:
                 )
                 ageing_service.calculate_ageing_factors()
                 progress.update_progress(
-                    70 + (i + 1) * 10, f"Calculated ageing factors for {dataset.date}"
+                    70 + (i + 1) / len(self.config.datasets) * 19,
+                    f"Calculated ageing factors for {dataset.date}",
                 )
 
             progress.update_progress(90, "Normalizing data...")

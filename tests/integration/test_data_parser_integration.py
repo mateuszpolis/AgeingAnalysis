@@ -210,13 +210,16 @@ class TestDataParserIntegration:
         ch1 = module.added_channels[0]
         assert ch1["channel_idx"] == 1
 
-        # Reference channel should have different length (peak slice)
+        # Reference channel should have full length but with peak slice data
         ref_signal = ch1["signal_series"]
         assert len(ref_signal) > 0
-        assert len(ref_signal) < 343  # Should be smaller than full signal
+        assert len(ref_signal) == 343  # Should be full signal length
 
-        # Should contain the second-largest peak data
-        assert ref_signal.max() > ref_signal.mean() * 1.0  # Should have clear peak
+        # Should contain the peak data
+        assert ref_signal.max() > 0  # Should have clear peak
+        assert (
+            ref_signal.max() > ref_signal.mean() * 10
+        )  # Peak should be much higher than mean
 
         # Second channel should use normal processing
         ch2 = module.added_channels[1]
@@ -276,9 +279,9 @@ class TestDataParserIntegration:
         ref_ch1 = module1.added_channels[0]["signal_series"]
         ref_ch3 = module3.added_channels[0]["signal_series"]
 
-        # Both reference channels should have peak slices (shorter than full signal)
-        assert len(ref_ch1) < 343
-        assert len(ref_ch3) < 343
+        # Both reference channels should have full length but with peak slice data
+        assert len(ref_ch1) == 343
+        assert len(ref_ch3) == 343
 
         # Non-reference module should have full signals
         for ch in module2.added_channels:
@@ -523,9 +526,9 @@ class TestDataParserIntegration:
         ch3_signal = module.added_channels[2]["signal_series"]  # Channel 3
         ch4_signal = module.added_channels[3]["signal_series"]  # Channel 4
 
-        # Reference channels should be shorter
-        assert len(ch1_signal) < 343
-        assert len(ch3_signal) < 343
+        # Reference channels should have full length but with peak slice data
+        assert len(ch1_signal) == 343
+        assert len(ch3_signal) == 343
 
         # Non-reference channels should be full length
         assert len(ch2_signal) == 343

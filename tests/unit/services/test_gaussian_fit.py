@@ -140,7 +140,7 @@ class TestGaussianFitService:
         # Create test data
         data_series = pd.Series([1, 2, 3, 2, 1])
 
-        result = service.calculate_weighted_mean(data_series, is_reference=False)
+        result = service.calculate_weighted_mean(data_series)
 
         assert isinstance(result, float)
         assert result > 0
@@ -150,7 +150,7 @@ class TestGaussianFitService:
         service = GaussianFitService(self.mock_dataset)
 
         zero_data = pd.Series([0, 0, 0, 0, 0])
-        result = service.calculate_weighted_mean(zero_data, is_reference=False)
+        result = service.calculate_weighted_mean(zero_data)
 
         assert result == 0
 
@@ -160,11 +160,11 @@ class TestGaussianFitService:
 
         data_series = pd.Series([1, 2, 3, 2, 1])
 
-        # Test with is_reference=True (should add 100 to x_data)
-        result = service.calculate_weighted_mean(data_series, is_reference=True)
+        # Test with reference channel data
+        result = service.calculate_weighted_mean(data_series)
 
         assert isinstance(result, float)
-        assert result > 100  # Should be shifted by 100
+        assert result > 0  # Should be a positive value
 
     @patch("matplotlib.pyplot.savefig")
     @patch("matplotlib.pyplot.close")

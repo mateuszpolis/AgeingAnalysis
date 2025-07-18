@@ -220,13 +220,27 @@ class TimeSeriesTab:
     def _show_tooltip(self, x, y, info):
         if self.tooltip_annotation:
             self.tooltip_annotation.remove()
-        tooltip_text = (
-            f"PM: {info['pm']}\n"
-            f"Channel: {info['channel']}\n"
-            f"Method: {info['method']}\n"
-            f"Date: {info['date']}\n"
-            f"Value: {info['value']:.4f}"
-        )
+
+        # Check if we're in integrated charge mode by
+        use_integrated_charge = "integrated_charge" in info
+
+        if use_integrated_charge:
+            tooltip_text = (
+                f"PM: {info['pm']}\n"
+                f"Channel: {info['channel']}\n"
+                f"Method: {info['method']}\n"
+                f"Integrated Charge: {info['integrated_charge']}\n"
+                f"Date: {info['date']}\n"
+                f"Value: {info['value']:.4f}"
+            )
+        else:
+            tooltip_text = (
+                f"PM: {info['pm']}\n"
+                f"Channel: {info['channel']}\n"
+                f"Method: {info['method']}\n"
+                f"Date: {info['date']}\n"
+                f"Value: {info['value']:.4f}"
+            )
         self.tooltip_annotation = self.ax.annotate(
             tooltip_text,
             xy=(x, y),
@@ -476,9 +490,15 @@ class TimeSeriesTab:
                                     gaussian_key = f"{channel_key}_gaussian"
                                     if gaussian_key not in channel_data:
                                         channel_data[gaussian_key] = []
-                                    channel_data[gaussian_key].append(
-                                        (x_value, gaussian_value)
-                                    )
+                                    # Store tuple with date for integrated charge mode
+                                    if use_integrated_charge:
+                                        channel_data[gaussian_key].append(
+                                            (x_value, gaussian_value, date_str)
+                                        )
+                                    else:
+                                        channel_data[gaussian_key].append(
+                                            (x_value, gaussian_value)
+                                        )
                             if show_weighted:
                                 weighted_value = ageing_factors.get(
                                     "normalized_weighted_ageing_factor", None
@@ -489,14 +509,25 @@ class TimeSeriesTab:
                                     weighted_key = f"{channel_key}_weighted"
                                     if weighted_key not in channel_data:
                                         channel_data[weighted_key] = []
-                                    channel_data[weighted_key].append(
-                                        (x_value, weighted_value)
-                                    )
+                                    # Store tuple with date for integrated charge mode
+                                    if use_integrated_charge:
+                                        channel_data[weighted_key].append(
+                                            (x_value, weighted_value, date_str)
+                                        )
+                                    else:
+                                        channel_data[weighted_key].append(
+                                            (x_value, weighted_value)
+                                        )
             colors = plt.cm.tab20(range(len(selected_channels)))
             for channel_key_method, data_points in channel_data.items():
                 if data_points:
                     data_points.sort(key=lambda x: x[0])
-                    x_values, values = zip(*data_points)
+                    if use_integrated_charge:
+                        # Unpack tuples with date information
+                        x_values, values, dates = zip(*data_points)
+                    else:
+                        # Unpack regular tuples
+                        x_values, values = zip(*data_points)
                     if channel_key_method.endswith("_gaussian"):
                         channel_key = channel_key_method[:-9]
                         method_label = "Gaussian"
@@ -536,15 +567,26 @@ class TimeSeriesTab:
                         point_key = (label, idx)
                         if use_integrated_charge:
                             x_display = f"{x_val:.0f}"
+                            # Get the correct date for this specific point
+                            point_date = dates[idx] if "dates" in locals() else date_str
+                            # Store both integrated charge and date for tooltip
+                            self.plot_data_info[point_key] = {
+                                "pm": pm_id,
+                                "channel": channel_name,
+                                "method": method_label,
+                                "integrated_charge": x_display,
+                                "date": point_date,
+                                "value": value,
+                            }
                         else:
                             x_display = x_val.strftime("%Y-%m-%d")
-                        self.plot_data_info[point_key] = {
-                            "pm": pm_id,
-                            "channel": channel_name,
-                            "method": method_label,
-                            "date": x_display,
-                            "value": value,
-                        }
+                            self.plot_data_info[point_key] = {
+                                "pm": pm_id,
+                                "channel": channel_name,
+                                "method": method_label,
+                                "date": x_display,
+                                "value": value,
+                            }
 
             # Set axis labels and formatting
             if use_integrated_charge:
