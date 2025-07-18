@@ -1,3 +1,10 @@
+## [1.8.4](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.8.3...v1.8.4) (2025-07-18)
+
+
+### Bug Fixes
+
+* enhance fallback mechanism for loading mappings in GridVisualizationService ([911b9d0](https://github.com/mateuszpolis/AgeingAnalysis/commit/911b9d0395b1d8669ae0e53beb6f08e581eb13d8))
+
 ## [1.8.3](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.8.2...v1.8.3) (2025-07-18)
 
 
