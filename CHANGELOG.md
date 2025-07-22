@@ -1,3 +1,10 @@
+# [1.10.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.9.0...v1.10.0) (2025-07-22)
+
+
+### Features
+
+* **grid_visualization:** add custom colormap option for grid visualization ([f01eab4](https://github.com/mateuszpolis/AgeingAnalysis/commit/f01eab4b90f9229cfe7dd018d396c0e2a4c34a62))
+
 # [1.9.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.8.8...v1.9.0) (2025-07-22)
 
 
