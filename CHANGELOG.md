@@ -1,3 +1,10 @@
+# [1.11.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.10.0...v1.11.0) (2025-07-22)
+
+
+### Features
+
+* **ageing_analysis:** add prompt for saving results after analysis completion ([a8c5246](https://github.com/mateuszpolis/AgeingAnalysis/commit/a8c5246d3f547028770ff3c18c15fb16a88575a1))
+
 # [1.10.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.9.0...v1.10.0) (2025-07-22)
 
 
