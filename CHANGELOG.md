@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.8.8...v1.9.0) (2025-07-22)
+
+
+### Features
+
+* **data_parser:** improve non-reference channel data processing and refactor peak detection plotting ([f9b364c](https://github.com/mateuszpolis/AgeingAnalysis/commit/f9b364c13e1f307d954fa695c8b5fc5407ec809c))
+
 ## [1.8.8](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.8.7...v1.8.8) (2025-07-18)
 
 
