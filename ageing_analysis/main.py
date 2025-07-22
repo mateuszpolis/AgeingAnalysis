@@ -6,6 +6,7 @@ including data processing, statistical analysis, and interactive visualization.
 """
 
 import argparse
+import datetime
 import logging
 import sys
 import tkinter as tk
@@ -453,6 +454,27 @@ class AgeingAnalysisApp:
             messagebox.showerror("Error", error_msg)
             self.status_var.set("Error loading results")
 
+    def _prompt_save_results(self):
+        """Prompt user to save analysis results."""
+        try:
+            # Ask user if they want to save results
+            response = messagebox.askyesno(
+                "Save Results",
+                "Analysis completed successfully!\n\n"
+                "Would you like to save the results?",
+                icon=messagebox.QUESTION,
+            )
+
+            if response:
+                self._save_results()
+            else:
+                self.status_var.set("Analysis completed - Results not saved")
+
+        except Exception as e:
+            error_msg = f"Error prompting for save: {str(e)}"
+            logger.error(error_msg)
+            messagebox.showerror("Error", error_msg)
+
     def _save_results(self):
         """Save current results to file."""
         if not self.config:
@@ -460,9 +482,20 @@ class AgeingAnalysisApp:
             return
 
         try:
+            # Generate default filename with timestamp
+            from datetime import datetime
+
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            default_filename = f"ageing_analysis_results_{timestamp}.json"
+
+            # Propose default path in ageing_analysis_results directory
+            default_path = Path("ageing_analysis_results") / default_filename
+
             file_path = filedialog.asksaveasfilename(
                 title="Save Results",
                 defaultextension=".json",
+                initialfile=default_filename,
+                initialdir=str(default_path.parent),
                 filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
             )
 
@@ -683,6 +716,12 @@ class AgeingAnalysisApp:
 
             # Step 6: Save results
             logger.info("Saving results...")
+            if output_path is None:
+                # Generate default filename with timestamp
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                default_filename = f"ageing_analysis_results_{timestamp}.json"
+                output_path = f"ageing_analysis_results/{default_filename}"
+
             results_path = save_results(
                 self.config,
                 output_path=output_path,
@@ -746,13 +785,7 @@ class AgeingAnalysisApp:
     def _analysis_complete(self):
         """Handle analysis completion."""
         try:
-            # Save results automatically with the checkbox setting
-            results_path = save_results(
-                self.config, include_total_signal_data=self.save_total_signal_data.get()
-            )
-            self.results_path = results_path
-
-            # Display results
+            # Display results first
             results_dict = self.config.to_dict(
                 include_total_signal_data=self.save_total_signal_data.get()
             )
@@ -761,7 +794,10 @@ class AgeingAnalysisApp:
             # Enable visualization button
             self._enable_visualization_button()
 
-            self.status_var.set("Analysis completed successfully - Results saved")
+            # Prompt user to save results
+            self._prompt_save_results()
+
+            self.status_var.set("Analysis completed successfully")
 
         except Exception as e:
             error_msg = f"Error handling analysis completion: {str(e)}"
