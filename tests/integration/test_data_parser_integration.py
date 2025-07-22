@@ -157,15 +157,19 @@ class TestDataParserIntegration:
 
         # Signal should be from row 257+ (600-257=343 rows)
         assert len(ch1["signal_series"]) == 343
-        # Noise should be from rows 0-256 (257 rows)
-        assert len(ch1["noise_series"]) == 257
+        # Noise should be from rows 0-306 (307 rows) - extended to include bins 0-50
+        assert len(ch1["noise_series"]) == 307
 
         # Signal index should be re-indexed from 0
         assert list(ch1["signal_series"].index) == list(range(343))
 
         # Values should be reasonable (sum of two columns)
         assert ch1["signal_series"].mean() > 150  # Should be higher due to peaks
-        assert ch1["noise_series"].mean() < 50  # Should be lower (noise only)
+        # Noise series now includes bins 0-50 which contain
+        # signal data, so mean will be higher
+        assert (
+            ch1["noise_series"].mean() > 50
+        )  # Should be higher due to signal in bins 0-50
 
     def test_complete_workflow_reference_module(self):
         """Test complete workflow with reference module."""
@@ -428,11 +432,12 @@ class TestDataParserIntegration:
 
             if size > 257:
                 expected_signal_len = size - 257
-                expected_noise_len = 257
+                # Noise now extends to include bins 0-50 (307 total elements)
+                expected_noise_len = min(307, size)
             else:
                 # If file is smaller than 257 rows, all goes to noise
                 expected_signal_len = 0 if size <= 257 else size - 257
-                expected_noise_len = min(size, 257)
+                expected_noise_len = size
 
             assert len(ch["signal_series"]) == expected_signal_len
             assert len(ch["noise_series"]) == expected_noise_len
@@ -461,7 +466,7 @@ class TestDataParserIntegration:
         # Should work with minimal data
         ch = module.added_channels[0]
         assert len(ch["signal_series"]) == 3  # 260 - 257
-        assert len(ch["noise_series"]) == 257
+        assert len(ch["noise_series"]) == 260  # All data goes to noise for small files
 
     def test_large_number_of_channels(self):
         """Test with large number of channels."""
@@ -610,7 +615,7 @@ class TestDataParserPerformance:
         # Verify data integrity
         for ch in module.added_channels:
             assert len(ch["signal_series"]) == 5000 - 257  # 4743
-            assert len(ch["noise_series"]) == 257
+            assert len(ch["noise_series"]) == 307  # Extended to include bins 0-50
 
     def test_memory_usage_large_datasets(self):
         """Test memory usage with large datasets."""

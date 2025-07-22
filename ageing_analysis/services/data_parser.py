@@ -39,6 +39,18 @@ class DataParser:
         self.prominence_percent = prominence_percent
         self.peak_merge_threshold = peak_merge_threshold
 
+    def _get_non_reference_channel_data(
+        self,
+        data: pd.DataFrame,
+        col1: int,
+        col2: int,
+    ) -> pd.Series:
+        """Get the data for a non-reference channel."""
+        sig_series = data.iloc[:, [col1, col2]].sum(axis=1)
+        # Replace first 25 bins with zeros to handle noise in the -25 to 25 bin range
+        sig_series.iloc[:25] = 0
+        return sig_series
+
     def _get_reference_channel_data(
         self,
         data: pd.DataFrame,
@@ -103,175 +115,7 @@ class DataParser:
 
         # Generate debugging plots for all scenarios
         if self.debug_mode:
-            debug_folder = f"debug_plots/data_parser/{self.dataset.date}"
-            if not os.path.exists(debug_folder):
-                os.makedirs(debug_folder)
-
-            plt.figure(figsize=(12, 8))
-
-            # Plot the summed signal
-            plt.plot(
-                summed.index, summed.values, "b-", linewidth=2, label="Summed Signal"
-            )
-
-            # Determine the scenario and plot accordingly
-            num_peaks = len(peaks)
-            lb, rb = None, None
-
-            if num_peaks == 0:
-                # No peaks found
-                plt.title(
-                    f"Peak Detection Debug - Channels {col1} & {col2} [NO PEAKS FOUND]"
-                )
-                status_text = "No peaks detected"
-
-            elif num_peaks == 1:
-                # Only one peak found
-                peak_idx = peaks[0]
-                prominence = props["prominences"][0]
-                plt.plot(
-                    summed.index[peak_idx],
-                    summed.values[peak_idx],
-                    "orange",
-                    marker="o",
-                    markersize=10,
-                    label="Only Peak Found",
-                )
-                plt.annotate(
-                    f"Single Peak\n(prom: {prominence:.1f})",
-                    xy=(summed.index[peak_idx], summed.values[peak_idx]),
-                    xytext=(10, 10),
-                    textcoords="offset points",
-                    bbox=dict(boxstyle="round,pad=0.3", facecolor="orange", alpha=0.7),
-                )
-                plt.title(
-                    f"Peak Detection Debug - Channels {col1} & {col2} "
-                    "[INSUFFICIENT PEAKS]"
-                )
-                status_text = "Only 1 peak found (need 2)"
-
-            elif num_peaks == 2:
-                # Exactly 2 peaks - normal case
-                for i, peak_idx in enumerate(peaks):
-                    prominence = props["prominences"][i]
-                    color = "ro" if i > 0 else "go"  # Green for first, red for others
-                    markersize = 12 if i == 0 else 8
-                    plt.plot(
-                        summed.index[peak_idx],
-                        summed.values[peak_idx],
-                        color,
-                        markersize=markersize,
-                    )
-
-                    if i == 0:
-                        plt.annotate(
-                            f"SELECTED Peak\n(prom: {prominence:.1f})",
-                            xy=(summed.index[peak_idx], summed.values[peak_idx]),
-                            xytext=(10, 10),
-                            textcoords="offset points",
-                            bbox=dict(
-                                boxstyle="round,pad=0.3",
-                                facecolor="lightgreen",
-                                alpha=0.7,
-                            ),
-                        )
-                    else:
-                        plt.annotate(
-                            f"Peak {i+1}\n(prom: {prominence:.1f})",
-                            xy=(summed.index[peak_idx], summed.values[peak_idx]),
-                            xytext=(10, 10),
-                            textcoords="offset points",
-                            bbox=dict(
-                                boxstyle="round,pad=0.3", facecolor="yellow", alpha=0.7
-                            ),
-                        )
-
-                # Set up for region selection
-                lb = props["left_bases"][0]
-                rb = props["right_bases"][0]
-
-                # Draw vertical lines for left and right bases
-                plt.axvline(
-                    x=summed.index[lb],
-                    color="red",
-                    linestyle="--",
-                    linewidth=2,
-                    label=f"Left Base (idx: {lb})",
-                )
-                plt.axvline(
-                    x=summed.index[rb],
-                    color="red",
-                    linestyle="--",
-                    linewidth=2,
-                    label=f"Right Base (idx: {rb})",
-                )
-
-                # Fill the selected region
-                selected_region = summed.iloc[lb:rb]
-                plt.fill_between(
-                    selected_region.index,
-                    selected_region.values,
-                    alpha=0.3,
-                    color="green",
-                    label="Selected Region",
-                )
-
-                plt.title(f"Peak Detection Debug - Channels {col1} & {col2} [SUCCESS]")
-                status_text = (
-                    f"2 peaks found, first peak selected (spans bins {lb}→{rb})"
-                )
-
-            else:
-                # More than 2 peaks
-                for i, peak_idx in enumerate(peaks):
-                    prominence = props["prominences"][i]
-                    plt.plot(
-                        summed.index[peak_idx],
-                        summed.values[peak_idx],
-                        "purple",
-                        marker="x",
-                        markersize=8,
-                    )
-                    plt.annotate(
-                        f"Peak {i+1}\n(prom: {prominence:.1f})",
-                        xy=(summed.index[peak_idx], summed.values[peak_idx]),
-                        xytext=(10, 10),
-                        textcoords="offset points",
-                        bbox=dict(
-                            boxstyle="round,pad=0.3", facecolor="purple", alpha=0.3
-                        ),
-                    )
-
-                plt.title(
-                    f"Peak Detection Debug - Channels {col1} & {col2} [TOO MANY PEAKS]"
-                )
-                status_text = f"{num_peaks} peaks found (expected exactly 2)"
-
-            # Add status text to plot
-            plt.figtext(
-                0.02,
-                0.02,
-                status_text,
-                fontsize=10,
-                bbox=dict(boxstyle="round,pad=0.3", facecolor="lightblue", alpha=0.7),
-            )
-
-            plt.xlabel("Index")
-            plt.ylabel("Signal Value")
-            plt.legend()
-            plt.grid(True, alpha=0.3)
-
-            # Save plot with unique filename
-            existing_files = len(
-                [f for f in os.listdir(debug_folder) if f.endswith(".png")]
-            )
-            plot_filename = (
-                f"{debug_folder}/peak_debug_ch{col1}_{col2}_{existing_files}.png"
-            )
-            plt.savefig(plot_filename, dpi=150, bbox_inches="tight")
-            plt.close()
-
-            logger.debug(f"Debug plot saved: {plot_filename}")
+            self._create_peak_detection_debug_plot(summed, peaks, props, col1, col2)
 
         # Now handle the different cases with appropriate errors
         if len(peaks) < 2:
@@ -315,6 +159,190 @@ class DataParser:
             name=f"ref_chan_{col1}_{col2}",
         )
 
+    def _create_peak_detection_debug_plot(
+        self,
+        summed: pd.Series,
+        peaks: np.ndarray,
+        props: dict,
+        col1: int,
+        col2: int,
+    ):
+        """Create debug plot for peak detection analysis.
+
+        Args:
+            summed: The summed signal data
+            peaks: Array of detected peak indices
+            props: Peak properties from find_peaks
+            col1: First column index
+            col2: Second column index
+        """
+        debug_folder = f"debug_plots/data_parser/{self.dataset.date}"
+        if not os.path.exists(debug_folder):
+            os.makedirs(debug_folder)
+
+        plt.figure(figsize=(12, 8))
+
+        # Change the index start from 50
+        summed.index = list(range(50, len(summed) + 50))
+
+        # Plot the summed signal
+        plt.plot(summed.index, summed.values, "b-", linewidth=2, label="Summed Signal")
+
+        # Determine the scenario and plot accordingly
+        num_peaks = len(peaks)
+        lb, rb = None, None
+
+        if num_peaks == 0:
+            # No peaks found
+            plt.title(
+                f"Peak Detection Debug - Channels {col1} & {col2} [NO PEAKS FOUND]"
+            )
+            status_text = "No peaks detected"
+
+        elif num_peaks == 1:
+            # Only one peak found
+            peak_idx = peaks[0]
+            prominence = props["prominences"][0]
+            plt.plot(
+                summed.index[peak_idx],
+                summed.values[peak_idx],
+                "orange",
+                marker="o",
+                markersize=10,
+                label="Only Peak Found",
+            )
+            plt.annotate(
+                f"Single Peak\n(prom: {prominence:.1f})",
+                xy=(summed.index[peak_idx], summed.values[peak_idx]),
+                xytext=(10, 10),
+                textcoords="offset points",
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="orange", alpha=0.7),
+            )
+            plt.title(
+                f"Peak Detection Debug - Channels {col1} & {col2} "
+                "[INSUFFICIENT PEAKS]"
+            )
+            status_text = "Only 1 peak found (need 2)"
+
+        elif num_peaks == 2:
+            # Exactly 2 peaks - normal case
+            for i, peak_idx in enumerate(peaks):
+                prominence = props["prominences"][i]
+                color = "ro" if i > 0 else "go"  # Green for first, red for others
+                markersize = 12 if i == 0 else 8
+                plt.plot(
+                    summed.index[peak_idx],
+                    summed.values[peak_idx],
+                    color,
+                    markersize=markersize,
+                )
+
+                if i == 0:
+                    plt.annotate(
+                        f"SELECTED Peak\n(prom: {prominence:.1f})",
+                        xy=(summed.index[peak_idx], summed.values[peak_idx]),
+                        xytext=(10, 10),
+                        textcoords="offset points",
+                        bbox=dict(
+                            boxstyle="round,pad=0.3",
+                            facecolor="lightgreen",
+                            alpha=0.7,
+                        ),
+                    )
+                else:
+                    plt.annotate(
+                        f"Peak {i+1}\n(prom: {prominence:.1f})",
+                        xy=(summed.index[peak_idx], summed.values[peak_idx]),
+                        xytext=(10, 10),
+                        textcoords="offset points",
+                        bbox=dict(
+                            boxstyle="round,pad=0.3", facecolor="yellow", alpha=0.7
+                        ),
+                    )
+
+            # Set up for region selection
+            lb = props["left_bases"][0]
+            rb = props["right_bases"][0]
+
+            # Draw vertical lines for left and right bases
+            plt.axvline(
+                x=summed.index[lb],
+                color="red",
+                linestyle="--",
+                linewidth=2,
+                label=f"Left Base (idx: {lb})",
+            )
+            plt.axvline(
+                x=summed.index[rb],
+                color="red",
+                linestyle="--",
+                linewidth=2,
+                label=f"Right Base (idx: {rb})",
+            )
+
+            # Fill the selected region
+            selected_region = summed.iloc[lb:rb]
+            plt.fill_between(
+                selected_region.index,
+                selected_region.values,
+                alpha=0.3,
+                color="green",
+                label="Selected Region",
+            )
+
+            plt.title(f"Peak Detection Debug - Channels {col1} & {col2} [SUCCESS]")
+            status_text = f"2 peaks found, first peak selected (spans bins {lb}→{rb})"
+
+        else:
+            # More than 2 peaks
+            for i, peak_idx in enumerate(peaks):
+                prominence = props["prominences"][i]
+                plt.plot(
+                    summed.index[peak_idx],
+                    summed.values[peak_idx],
+                    "purple",
+                    marker="x",
+                    markersize=8,
+                )
+                plt.annotate(
+                    f"Peak {i+1}\n(prom: {prominence:.1f})",
+                    xy=(summed.index[peak_idx], summed.values[peak_idx]),
+                    xytext=(10, 10),
+                    textcoords="offset points",
+                    bbox=dict(boxstyle="round,pad=0.3", facecolor="purple", alpha=0.3),
+                )
+
+            plt.title(
+                f"Peak Detection Debug - Channels {col1} & {col2} [TOO MANY PEAKS]"
+            )
+            status_text = f"{num_peaks} peaks found (expected exactly 2)"
+
+        # Add status text to plot
+        plt.figtext(
+            0.02,
+            0.02,
+            status_text,
+            fontsize=10,
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="lightblue", alpha=0.7),
+        )
+
+        plt.xlabel("Index")
+        plt.ylabel("Signal Value")
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+
+        # Save plot with unique filename
+        existing_files = len(
+            [f for f in os.listdir(debug_folder) if f.endswith(".png")]
+        )
+        plot_filename = (
+            f"{debug_folder}/peak_debug_ch{col1}_{col2}_{existing_files}.png"
+        )
+        plt.savefig(plot_filename, dpi=150, bbox_inches="tight")
+        plt.close()
+
+        logger.debug(f"Debug plot saved: {plot_filename}")
+
     def _parse_and_process_file(self, module: Module):
         """Parse & process a single CSV file for creating Channels."""
         # Load into a DataFrame
@@ -329,8 +357,10 @@ class DataParser:
 
         # Drop the bin‐column and split
         df = df.iloc[:, 1:]
-        sig_df = df.iloc[257:]  # from row 258 on
-        noise_df = df.iloc[:257]  # up to row 257
+        sig_df = df.iloc[257:]  # from bin 0
+        # We leave the noise series longer, as in case the channel is aged
+        # there might not be any more signal after bin 50
+        noise_df = df.iloc[:307]  # up to bin 50
 
         # Process each channel‐pair
         for i in range(0, df.shape[1] - 1, 2):
@@ -338,9 +368,24 @@ class DataParser:
             if module.is_reference and chan_idx in module.ref_channels:
                 sig_series = self._get_reference_channel_data(sig_df, i, i + 1)
             else:
-                sig_series = sig_df.iloc[:, i] + sig_df.iloc[:, i + 1]
+                sig_series = self._get_non_reference_channel_data(sig_df, i, i + 1)
 
+            # Create noise series with proper bin positions
+            # First 256 bins are negative (-256 to -1), then bins 0 to 50
             noise_series = noise_df.iloc[:, i] + noise_df.iloc[:, i + 1]
+            # Set proper indices based on actual data length
+            # If we have 307 rows: -256 to 50 (307 elements)
+            # If we have fewer rows, adjust accordingly
+            actual_noise_length = len(noise_series)
+            if actual_noise_length >= 307:
+                # Full range: -256 to 50
+                noise_series.index = list(range(-256, 51))
+            else:
+                # Partial range: start from -(actual_noise_length-51) to 50
+                # This ensures we always have bins 0-50 at the end
+                start_bin = -(actual_noise_length - 51)
+                noise_series.index = list(range(start_bin, 51))
+
             total_signal_series = df.iloc[:, i] + df.iloc[:, i + 1]
 
             # re-index so x = 0…N−1

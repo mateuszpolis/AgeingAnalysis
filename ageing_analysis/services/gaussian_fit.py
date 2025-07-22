@@ -69,7 +69,7 @@ class GaussianFitService:
 
         plt.figure(figsize=(12, 8))
 
-        x_data = np.arange(len(data_series))
+        x_data = data_series.index
         y_data = data_series.values
 
         # --- ZOOM LOGIC ---
@@ -209,7 +209,7 @@ class GaussianFitService:
                 )
             return 0
 
-        x_data = np.arange(len(data_series))
+        x_data = data_series.index
         y_data = data_series.values
 
         initial_guess = [
@@ -253,7 +253,7 @@ class GaussianFitService:
             logger.warning("Sum of values is zero. Cannot calculate weighted mean.")
             return 0
 
-        x_data = np.arange(len(data_series))
+        x_data = data_series.index
         values = data_series.values
 
         return float(np.sum(x_data * values) / np.sum(values))

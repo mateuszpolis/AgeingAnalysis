@@ -489,9 +489,9 @@ class TestParseAndProcessFile:
         chan_idx, sig_series, noise_series, total_signal_series = call_args
 
         # Signal should be from row 257 onwards (600-257 = 343 rows)
-        # Noise should be from rows 0-256 (257 rows)
+        # Noise should be from rows 0-306 (307 rows) - extended to include bins 0-50
         assert len(sig_series) == 343  # 600 - 257
-        assert len(noise_series) == 257
+        assert len(noise_series) == 307
 
     @patch("pandas.read_csv")
     def test_reference_channel_error_handling(self, mock_read_csv):
