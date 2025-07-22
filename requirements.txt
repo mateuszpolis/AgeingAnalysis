@@ -20,6 +20,7 @@ plotly>=5.0.0   # Optional for interactive plots
 pytest>=7.0.0
 pytest-cov>=4.0.0
 pytest-mock>=3.10.0
+requests>=2.28.0  # Required for DA_batch_client
 scipy>=1.9.0
 
 # Optional: For enhanced plotting (if needed in the future)

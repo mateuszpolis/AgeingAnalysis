@@ -28,7 +28,7 @@ Usage:
 """
 
 __version__ = "1.11.0"
-__author__ = "FIT Detector Team"
+__author__ = "Mateusz Polis"
 
 # Core imports: entities, main app, services, and utilities
 from .entities import Channel, Config, Dataset, Module

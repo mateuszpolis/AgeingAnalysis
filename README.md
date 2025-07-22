@@ -33,6 +33,21 @@ git submodule add <repository-url> modules/ageing-analysis
 pip install -r modules/ageing-analysis/requirements.txt
 ```
 
+## DA_batch_client Requirement
+
+**Important**: The AgeingAnalysis module includes integration with the DA_batch_client for retrieving data from the DARMA API. However, the DA_batch_client is a private component that cannot be shared publicly due to licensing restrictions.
+
+### To use the DARMA API functionality:
+
+1. **Request Access**: Contact the development team to request access to the DA_batch_client component
+2. **Installation**: Once you have access, the DA_batch_client will be provided separately
+3. **Placement**: Place the DA_batch_client files in the `ageing_analysis/utils/da_batch_client/` directory
+4. **Dependencies**: Ensure you have the `requests` library installed (`pip install requests>=2.28.0`)
+
+### Without DA_batch_client:
+
+The module will still function for local data analysis, but the DARMA API integration features will not be available. All other functionality (data parsing, analysis, visualization) remains fully operational.
+
 ## Usage
 
 ### As a Standalone Application

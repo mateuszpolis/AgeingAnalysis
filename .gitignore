@@ -1,4 +1,5 @@
 debug_plots/
+ageing_analysis/utils/da_batch_client/DA_batch_client.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
