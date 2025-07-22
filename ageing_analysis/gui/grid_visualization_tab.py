@@ -30,9 +30,28 @@ class GridVisualizationTab:
         self.mapping_var = tk.StringVar()
         self.date_var = tk.StringVar()
         self.ageing_factor_var = tk.StringVar(value="normalized_gauss_ageing_factor")
-        self.colormap_var = tk.StringVar(value="RdYlGn")
+        self.colormap_var = tk.StringVar(value="custom")
         self.vmin_var = tk.DoubleVar(value=0.4)
         self.vmax_var = tk.DoubleVar(value=1.2)
+
+        # Custom color palette
+        self.custom_colormap_colors = [
+            "#000000",
+            "#623200",
+            "#944A00",
+            "#C66300",
+            "#F77B02",
+            "#FF9B19",
+            "#FFC642",
+            "#FFEE6B",
+            "#EEF773",
+            "#C5DE62",
+            "#9BC64A",
+            "#73AD39",
+            "#4A8C22",
+            "#207311",
+            "#016300",
+        ]
 
         # Plot components
         self.fig = None
@@ -123,7 +142,7 @@ class GridVisualizationTab:
         colormap_combobox = ttk.Combobox(
             colormap_frame,
             textvariable=self.colormap_var,
-            values=["RdYlGn", "viridis", "plasma", "coolwarm", "seismic"],
+            values=["custom", "RdYlGn", "viridis", "plasma", "coolwarm", "seismic"],
             state="readonly",
             width=15,
         )
@@ -550,9 +569,14 @@ class GridVisualizationTab:
             ageing_factor_type: Type of ageing factor being displayed
         """
         import matplotlib.pyplot as plt
+        from matplotlib.colors import ListedColormap
 
         # Create the grid visualization using rectangles
-        cmap = plt.get_cmap(colormap)
+        if colormap == "custom":
+            # Create custom colormap from the color list
+            cmap = ListedColormap(self.custom_colormap_colors)
+        else:
+            cmap = plt.get_cmap(colormap)
 
         # Collect data points
         x_positions = []
@@ -643,8 +667,16 @@ class GridVisualizationTab:
         ax.set_frame_on(False)
 
         # Add colorbar
+        if colormap == "custom":
+            # Create custom colormap for the colorbar
+            cbar_cmap = ListedColormap(self.custom_colormap_colors)
+        else:
+            cbar_cmap = cmap
+
         cbar = self.fig.colorbar(
-            plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=vmin, vmax=vmax)),
+            plt.cm.ScalarMappable(
+                cmap=cbar_cmap, norm=plt.Normalize(vmin=vmin, vmax=vmax)
+            ),
             ax=ax,
         )
         cbar.set_label(f"{display_name} Ageing Factor")
