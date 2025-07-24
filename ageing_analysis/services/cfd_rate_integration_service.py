@@ -333,6 +333,7 @@ class CFDRateIntegrationService:
         end_date: datetime.date,
         chunk_size_days: int = 1,
         filename: str | None = None,
+        multiply_by_mu: bool = False,
     ) -> Dict[str, Dict[str, float]]:
         """Get integrated CFD rate data for the specified date range.
 
@@ -342,6 +343,8 @@ class CFDRateIntegrationService:
             chunk_size_days: Number of days to process in each chunk (default: 1)
             filename: Optional filename for the parquet file.
                 If None, uses default based on dataset.
+            multiply_by_mu: If True, multiply the integrated CFD rate by the mu
+                value.
 
         Returns:
             Dictionary with PM as keys and dictionaries with Channels as keys
@@ -396,7 +399,8 @@ class CFDRateIntegrationService:
 
         # Return the complete dataset for the requested range
         return self._sum_integrated_cfd_rate(
-            self._query_integrated_cfd_rate(start_date, end_date, filename=filename)
+            self._query_integrated_cfd_rate(start_date, end_date, filename=filename),
+            multiply_by_mu,
         )
 
     def _get_pm_and_channel_from_element_name(
@@ -415,13 +419,15 @@ class CFDRateIntegrationService:
         return pm, channel
 
     def _sum_integrated_cfd_rate(
-        self, integrated_data: pd.DataFrame
+        self, integrated_data: pd.DataFrame, multiply_by_mu: bool = False
     ) -> Dict[str, Dict[str, float]]:
         """Sum the integrated CFD rate by PM and Channel.
 
         Args:
             integrated_data: DataFrame with columns
             ["timestamp", "value", "element_name"]
+            multiply_by_mu: If True, multiply the integrated CFD rate by the mu
+                value.
 
         Returns:
             Dictionary with PM as keys and dictionaries with Channels as keys
@@ -438,6 +444,12 @@ class CFDRateIntegrationService:
 
         # Concatenate with original data
         df = pd.concat([integrated_data, pm_channel_df], axis=1)
+
+        mu = 43 * 10**-15
+
+        # Apply mu multiplication to individual values before grouping if requested
+        if multiply_by_mu:
+            df["value"] = df["value"] * mu
 
         # Group by PM and Channel and sum values
         grouped = df.groupby(["pm", "channel"])["value"].sum().reset_index()

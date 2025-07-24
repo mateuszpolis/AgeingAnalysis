@@ -1683,3 +1683,187 @@ class TestCFDRateIntegrationService:
         assert all(
             missing_elements_data["timestamp"].dt.date == datetime.date(2025, 7, 2)
         )
+
+    def test_sum_integrated_cfd_rate_without_mu(self):
+        """Test _sum_integrated_cfd_rate without mu multiplication."""
+        # Arrange
+        integrated_data = pd.DataFrame(
+            {
+                "timestamp": [
+                    pd.Timestamp("2025-01-01 12:00:00"),
+                    pd.Timestamp("2025-01-01 12:00:00"),
+                    pd.Timestamp("2025-01-02 12:00:00"),
+                    pd.Timestamp("2025-01-02 12:00:00"),
+                ],
+                "value": [100.0, 200.0, 150.0, 250.0],
+                "element_name": [
+                    "ft0_dcs:FEE/PMA0/Ch01.actual.CFD_RATE",
+                    "ft0_dcs:FEE/PMA0/Ch02.actual.CFD_RATE",
+                    "ft0_dcs:FEE/PMA0/Ch01.actual.CFD_RATE",
+                    "ft0_dcs:FEE/PMA0/Ch02.actual.CFD_RATE",
+                ],
+            }
+        )
+
+        # Act
+        result = self.service._sum_integrated_cfd_rate(
+            integrated_data, multiply_by_mu=False
+        )
+
+        # Assert
+        assert "PMA0" in result
+        assert "Ch01" in result["PMA0"]
+        assert "Ch02" in result["PMA0"]
+
+        # Values should be summed without mu multiplication
+        # Ch01: 100.0 + 150.0 = 250.0
+        # Ch02: 200.0 + 250.0 = 450.0
+        assert result["PMA0"]["Ch01"] == 250.0
+        assert result["PMA0"]["Ch02"] == 450.0
+
+    def test_sum_integrated_cfd_rate_with_mu(self):
+        """Test _sum_integrated_cfd_rate with mu multiplication."""
+        # Arrange
+        integrated_data = pd.DataFrame(
+            {
+                "timestamp": [
+                    pd.Timestamp("2025-01-01 12:00:00"),
+                    pd.Timestamp("2025-01-01 12:00:00"),
+                    pd.Timestamp("2025-01-02 12:00:00"),
+                    pd.Timestamp("2025-01-02 12:00:00"),
+                ],
+                "value": [100.0, 200.0, 150.0, 250.0],
+                "element_name": [
+                    "ft0_dcs:FEE/PMA0/Ch01.actual.CFD_RATE",
+                    "ft0_dcs:FEE/PMA0/Ch02.actual.CFD_RATE",
+                    "ft0_dcs:FEE/PMA0/Ch01.actual.CFD_RATE",
+                    "ft0_dcs:FEE/PMA0/Ch02.actual.CFD_RATE",
+                ],
+            }
+        )
+
+        # Act
+        result = self.service._sum_integrated_cfd_rate(
+            integrated_data, multiply_by_mu=True
+        )
+
+        # Assert
+        assert "PMA0" in result
+        assert "Ch01" in result["PMA0"]
+        assert "Ch02" in result["PMA0"]
+
+        # Values should be summed and multiplied by mu (43e-15)
+        mu = 43e-15
+        # Ch01: (100.0 + 150.0) * mu = 250.0 * 43e-15 = 1.075e-11
+        # Ch02: (200.0 + 250.0) * mu = 450.0 * 43e-15 = 1.935e-11
+        expected_ch01 = 250.0 * mu
+        expected_ch02 = 450.0 * mu
+
+        assert abs(result["PMA0"]["Ch01"] - expected_ch01) < 1e-20
+        assert abs(result["PMA0"]["Ch02"] - expected_ch02) < 1e-20
+
+    def test_sum_integrated_cfd_rate_multiple_pms(self):
+        """Test _sum_integrated_cfd_rate with multiple PMs and mu multiplication."""
+        # Arrange
+        integrated_data = pd.DataFrame(
+            {
+                "timestamp": [
+                    pd.Timestamp("2025-01-01 12:00:00"),
+                    pd.Timestamp("2025-01-01 12:00:00"),
+                    pd.Timestamp("2025-01-01 12:00:00"),
+                    pd.Timestamp("2025-01-01 12:00:00"),
+                ],
+                "value": [100.0, 200.0, 300.0, 400.0],
+                "element_name": [
+                    "ft0_dcs:FEE/PMA0/Ch01.actual.CFD_RATE",
+                    "ft0_dcs:FEE/PMA0/Ch02.actual.CFD_RATE",
+                    "ft0_dcs:FEE/PMA1/Ch01.actual.CFD_RATE",
+                    "ft0_dcs:FEE/PMA1/Ch02.actual.CFD_RATE",
+                ],
+            }
+        )
+
+        # Act
+        result = self.service._sum_integrated_cfd_rate(
+            integrated_data, multiply_by_mu=True
+        )
+
+        # Assert
+        assert "PMA0" in result
+        assert "PMA1" in result
+        assert "Ch01" in result["PMA0"]
+        assert "Ch02" in result["PMA0"]
+        assert "Ch01" in result["PMA1"]
+        assert "Ch02" in result["PMA1"]
+
+        # Values should be multiplied by mu (43e-15)
+        mu = 43e-15
+        assert abs(result["PMA0"]["Ch01"] - 100.0 * mu) < 1e-20
+        assert abs(result["PMA0"]["Ch02"] - 200.0 * mu) < 1e-20
+        assert abs(result["PMA1"]["Ch01"] - 300.0 * mu) < 1e-20
+        assert abs(result["PMA1"]["Ch02"] - 400.0 * mu) < 1e-20
+
+    def test_sum_integrated_cfd_rate_empty_data(self):
+        """Test _sum_integrated_cfd_rate with empty data."""
+        # Arrange
+        integrated_data = pd.DataFrame(columns=["timestamp", "value", "element_name"])
+
+        # Act
+        result_without_mu = self.service._sum_integrated_cfd_rate(
+            integrated_data, multiply_by_mu=False
+        )
+        result_with_mu = self.service._sum_integrated_cfd_rate(
+            integrated_data, multiply_by_mu=True
+        )
+
+        # Assert
+        assert result_without_mu == {}
+        assert result_with_mu == {}
+
+    def test_get_integrated_cfd_rate_with_mu_parameter(self):
+        """Test get_integrated_cfd_rate with multiply_by_mu parameter."""
+        # Arrange
+        start_date = datetime.date(2025, 1, 1)
+        end_date = datetime.date(2025, 1, 2)
+
+        # Mock the query to return some data
+        mock_data = pd.DataFrame(
+            {
+                "date": [
+                    datetime.date(2025, 1, 2),
+                    datetime.date(2025, 1, 3),
+                    datetime.date(2025, 1, 2),
+                    datetime.date(2025, 1, 3),
+                ],
+                "element_name": [
+                    "ft0_dcs:FEE/PMA0/Ch01.actual.CFD_RATE",
+                    "ft0_dcs:FEE/PMA0/Ch01.actual.CFD_RATE",
+                    "ft0_dcs:FEE/PMA0/Ch02.actual.CFD_RATE",
+                    "ft0_dcs:FEE/PMA0/Ch02.actual.CFD_RATE",
+                ],
+                "value": [100.0, 150.0, 200.0, 250.0],
+            }
+        )
+
+        self.service._query_integrated_cfd_rate = Mock(return_value=mock_data)
+
+        # Act
+        result_without_mu = self.service.get_integrated_cfd_rate(
+            start_date, end_date, multiply_by_mu=False
+        )
+        result_with_mu = self.service.get_integrated_cfd_rate(
+            start_date, end_date, multiply_by_mu=True
+        )
+
+        # Assert
+        assert "PMA0" in result_without_mu
+        assert "PMA0" in result_with_mu
+
+        # Without mu: values should be summed directly
+        assert result_without_mu["PMA0"]["Ch01"] == 250.0  # 100 + 150
+        assert result_without_mu["PMA0"]["Ch02"] == 450.0  # 200 + 250
+
+        # With mu: values should be summed and multiplied by mu
+        mu = 43e-15
+        assert abs(result_with_mu["PMA0"]["Ch01"] - 250.0 * mu) < 1e-20
+        assert abs(result_with_mu["PMA0"]["Ch02"] - 450.0 * mu) < 1e-20
