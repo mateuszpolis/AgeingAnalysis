@@ -1,6 +1,7 @@
 """This service is used to get data from the DARMA API."""
 
 import datetime
+import logging
 import tempfile
 import uuid
 from enum import Enum
@@ -15,6 +16,8 @@ from ..utils.da_batch_client.DA_batch_client import (
     save_result_file,
     upload_file,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class DarmaApiSchema(Enum):
@@ -115,10 +118,10 @@ class DarmaApiService:
                         save_result_file(result_file_base64, output_path)
                         output_files.append(Path(output_path))
             else:
-                print("Failed to get client IDs from DA_batch_client")
+                logger.error("Failed to get client IDs from DA_batch_client")
 
         except Exception as e:
-            print(f"Error calling DA_batch_client: {e}")
+            logger.error(f"Error calling DA_batch_client: {e}")
             # Create empty output file if DA_batch_client fails
             empty_file = f"{output_base}.csv"
             Path(empty_file).touch()
