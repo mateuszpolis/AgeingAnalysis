@@ -9,6 +9,7 @@ from .config_manager import ConfigManager
 from .data_normalizer import DataNormalizer
 from .data_parser import DataParser
 from .gaussian_fit import GaussianFitService
+from .integrated_charge_service import IntegratedChargeService
 from .reference_channel import ReferenceChannelService
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "ReferenceChannelService",
     "DataNormalizer",
     "ConfigManager",
+    "IntegratedChargeService",
 ]

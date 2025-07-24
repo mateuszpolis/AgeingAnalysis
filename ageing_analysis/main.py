@@ -121,6 +121,9 @@ class AgeingAnalysisApp:
                 self._add_result_text(f"Configuration loaded from {config_path}")
                 self.status_var.set("Configuration loaded successfully")
 
+                # Update integrated charge information
+                self._update_integrated_charge_info()
+
         except Exception as e:
             error_msg = f"Failed to load configuration: {str(e)}"
             logger.error(error_msg)
@@ -244,6 +247,27 @@ class AgeingAnalysisApp:
         self.config_status_var = tk.StringVar(value="No configuration loaded")
         ttk.Label(config_frame, textvariable=self.config_status_var).pack(pady=5)
 
+        # Integrated charge information frame
+        self.integrated_charge_frame = ttk.LabelFrame(
+            config_frame, text="Integrated Charge", padding="10"
+        )
+        self.integrated_charge_frame.pack(fill=tk.X, pady=(10, 0))
+
+        self.integrated_charge_status_var = tk.StringVar(
+            value="No configuration loaded"
+        )
+        ttk.Label(
+            self.integrated_charge_frame, textvariable=self.integrated_charge_status_var
+        ).pack(side=tk.LEFT, pady=5)
+
+        self.get_integrated_charge_btn = ttk.Button(
+            self.integrated_charge_frame,
+            text="Get Integrated Charge",
+            command=self._get_integrated_charge,
+            state=tk.DISABLED,
+        )
+        self.get_integrated_charge_btn.pack(side=tk.RIGHT, pady=5)
+
         # Analysis section
         analysis_frame = ttk.LabelFrame(main_frame, text="Analysis", padding="10")
         analysis_frame.pack(fill=tk.X, pady=(0, 20))
@@ -350,6 +374,63 @@ class AgeingAnalysisApp:
         """Enable the visualization button."""
         if hasattr(self, "viz_btn"):
             self.viz_btn.config(state=tk.NORMAL)
+
+    def _update_integrated_charge_info(self):
+        """Update the integrated charge information display."""
+        if not self.config or not hasattr(self, "integrated_charge_status_var"):
+            return
+
+        # Check if integrated charge is available in the config
+        has_integrated_charge = self._check_integrated_charge_availability()
+
+        if has_integrated_charge:
+            self.integrated_charge_status_var.set(
+                "✅ Integrated charge data is available"
+            )
+            self.get_integrated_charge_btn.config(state=tk.DISABLED)
+        else:
+            self.integrated_charge_status_var.set(
+                "❌ Integrated charge data is not available"
+            )
+            self.get_integrated_charge_btn.config(state=tk.NORMAL)
+
+    def _check_integrated_charge_availability(self) -> bool:
+        """Check if integrated charge is available in the current config.
+
+        Returns:
+            True if integrated charge is available for all datasets, False otherwise.
+        """
+        if not self.config or not self.config.datasets:
+            return False
+
+        # Check if all datasets have integrated charge data
+        for dataset in self.config.datasets:
+            # Check if any module in the dataset has integrated charge data
+            has_integrated_charge = False
+            for module in dataset.modules:
+                if (
+                    hasattr(module, "integrated_charge_data")
+                    and module.integrated_charge_data is not None
+                ):
+                    has_integrated_charge = True
+                    break
+
+            if not has_integrated_charge:
+                return False
+
+        return True
+
+    def _get_integrated_charge(self):
+        """Handle the Get Integrated Charge button click."""
+        # TODO: Implement integrated charge calculation for
+        # configs without integrated charge data
+
+        messagebox.showinfo(
+            "Get Integrated Charge",
+            "Integrated charge calculation feature is not yet implemented.\n\n"
+            "This feature will allow you to calculate integrated charge values "
+            "for configurations that don't have integrated charge data available.",
+        )
 
     def _create_status_bar(self):
         """Create status bar at the bottom."""
