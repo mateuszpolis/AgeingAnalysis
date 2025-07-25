@@ -8,6 +8,8 @@ including data processing, statistical analysis, and interactive visualization.
 import argparse
 import datetime
 import logging
+import os
+import platform
 import sys
 import tkinter as tk
 from pathlib import Path
@@ -148,6 +150,9 @@ class AgeingAnalysisApp:
         self.root.geometry("1400x900")
         self.root.minsize(1000, 700)
 
+        # Set window icon
+        self._set_window_icon()
+
         # Create menu bar
         self._create_menu_bar()
 
@@ -164,7 +169,131 @@ class AgeingAnalysisApp:
         # Set up window closing
         self.root.protocol("WM_DELETE_WINDOW", self._on_closing)
 
+        # Force icon refresh after window is fully created
+        self.root.after(100, self._refresh_window_icon)
+
+        # Additional refresh for macOS
+        if platform.system().lower() == "darwin":
+            self.root.after(500, self._refresh_window_icon)
+
         logger.info("GUI interface created")
+
+    def _set_window_icon(self):
+        """Set the window icon for the application."""
+        try:
+            # Try to load icon from various possible locations
+            icon_paths = [
+                "assets/logo.ico",  # Windows icon file
+                "assets/logo.png",  # PNG file
+                "assets/logo.gif",  # GIF file
+                "logo.ico",  # Root directory
+                "logo.png",  # Root directory
+                "logo.gif",  # Root directory
+            ]
+
+            icon_set = False
+            for icon_path in icon_paths:
+                if os.path.exists(icon_path):
+                    try:
+                        # Platform-specific handling
+                        system = platform.system().lower()
+
+                        if system == "darwin":  # macOS
+                            # On macOS, iconphoto works better than iconbitmap
+                            if icon_path.endswith(".png"):
+                                icon_image = tk.PhotoImage(file=icon_path)
+                                self.root.iconphoto(True, icon_image)
+                                icon_set = True
+                                logger.info(
+                                    f"Window icon set from: {icon_path} (macOS)"
+                                )
+                                break
+                            elif icon_path.endswith(".ico"):
+                                # Try both methods on macOS
+                                try:
+                                    self.root.iconbitmap(icon_path)
+                                    icon_set = True
+                                    logger.info(
+                                        f"Window icon set from: {icon_path} "
+                                        "(macOS iconbitmap)"
+                                    )
+                                    break
+                                except TclError:
+                                    icon_image = tk.PhotoImage(file=icon_path)
+                                    self.root.iconphoto(True, icon_image)
+                                    icon_set = True
+                                    logger.info(
+                                        f"Window icon set from: {icon_path} "
+                                        "(macOS iconphoto)"
+                                    )
+                                    break
+                        else:
+                            # Windows and Linux
+                            if icon_path.endswith(".ico"):
+                                # Try iconbitmap first (works well on Windows)
+                                try:
+                                    self.root.iconbitmap(icon_path)
+                                    icon_set = True
+                                    logger.info(
+                                        f"Window icon set from: {icon_path} "
+                                        "(iconbitmap)"
+                                    )
+                                    break
+                                except Exception:  # nosec B110
+                                    # Fallback to iconphoto for .ico files
+                                    pass
+
+                            # For all formats, try iconphoto
+                            # (more reliable across platforms)
+                            icon_image = tk.PhotoImage(file=icon_path)
+                            self.root.iconphoto(True, icon_image)
+                            icon_set = True
+                            logger.info(
+                                f"Window icon set from: {icon_path} " "(iconphoto)"
+                            )
+                            break
+
+                    except Exception as e:
+                        logger.warning(f"Failed to set icon from {icon_path}: {e}")
+                        continue
+
+            if not icon_set:
+                logger.info("No icon file found, using default icon")
+
+        except Exception as e:
+            logger.warning(f"Failed to set window icon: {e}")
+
+    def _refresh_window_icon(self):
+        """Refresh the window icon after the window is fully created."""
+        try:
+            # Try to set the icon again after the window is fully initialized
+            icon_paths = ["assets/logo.png", "assets/logo.ico", "logo.png", "logo.ico"]
+
+            for icon_path in icon_paths:
+                if os.path.exists(icon_path):
+                    try:
+                        if icon_path.endswith(".ico"):
+                            self.root.iconbitmap(icon_path)
+                            logger.info(f"Window icon refreshed from: {icon_path}")
+                            break
+                        else:
+                            icon_image = tk.PhotoImage(file=icon_path)
+                            self.root.iconphoto(True, icon_image)
+                            logger.info(f"Window icon refreshed from: {icon_path}")
+                            break
+                    except Exception as e:
+                        logger.warning(f"Failed to refresh icon from {icon_path}: {e}")
+                        continue
+
+            # Force window update on some platforms
+            self.root.update_idletasks()
+            self.root.update()
+
+            # Log current platform for debugging
+            logger.info(f"Window icon refresh completed on {platform.system()}")
+
+        except Exception as e:
+            logger.warning(f"Failed to refresh window icon: {e}")
 
     def _create_menu_bar(self):
         """Create the menu bar."""
@@ -214,13 +343,34 @@ class AgeingAnalysisApp:
         main_frame = ttk.Frame(self.analysis_frame)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
 
+        # Header frame for logo and title
+        header_frame = ttk.Frame(main_frame)
+        header_frame.pack(fill=tk.X, pady=(0, 20))
+
+        # Logo (if available)
+        self.logo_label = None
+        try:
+            logo_paths = ["assets/logo.png", "assets/logo.gif", "logo.png", "logo.gif"]
+
+            for logo_path in logo_paths:
+                if os.path.exists(logo_path):
+                    logo_image = tk.PhotoImage(file=logo_path)
+                    logo_image = logo_image.subsample(8, 8)
+                    self.logo_label = ttk.Label(header_frame, image=logo_image)
+                    self.logo_label.image = logo_image  # Keep a reference
+                    self.logo_label.pack(side=tk.LEFT, padx=(0, 20))
+                    logger.info(f"Logo loaded from: {logo_path}")
+                    break
+        except Exception as e:
+            logger.warning(f"Failed to load logo: {e}")
+
         # Title
         title_label = ttk.Label(
-            main_frame,
+            header_frame,
             text="FIT Detector Ageing Analysis",
             font=("TkDefaultFont", 20, "bold"),
         )
-        title_label.pack(pady=(0, 20))
+        title_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         # Configuration section
         config_frame = ttk.LabelFrame(main_frame, text="Configuration", padding="10")
@@ -961,9 +1111,58 @@ class AgeingAnalysisApp:
 
     def _show_about(self):
         """Show about dialog."""
-        about_text = """
-FIT Detector Ageing Analysis Module
+        # Create a custom about dialog with logo
+        about_window = tk.Toplevel(self.root)
+        about_window.title("About - FIT Detector Ageing Analysis")
+        about_window.geometry("400x500")
+        about_window.resizable(False, False)
 
+        # Center the window
+        about_window.update_idletasks()
+        x = (about_window.winfo_screenwidth() // 2) - (400 // 2)
+        y = (about_window.winfo_screenheight() // 2) - (500 // 2)
+        about_window.geometry(f"400x500+{x}+{y}")
+
+        # Make window modal
+        about_window.transient(self.root)
+        about_window.grab_set()
+
+        # Main frame
+        main_frame = ttk.Frame(about_window, padding="20")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Logo
+        logo_label = None
+        try:
+            logo_paths = ["assets/logo.png", "assets/logo.gif", "logo.png", "logo.gif"]
+            for logo_path in logo_paths:
+                if os.path.exists(logo_path):
+                    logo_image = tk.PhotoImage(file=logo_path)
+                    # Resize logo for about dialog
+                    logo_image = logo_image.subsample(3, 3)  # Reduce size
+                    logo_label = ttk.Label(main_frame, image=logo_image)
+                    logo_label.image = logo_image  # Keep a reference
+                    logo_label.pack(pady=(0, 20))
+                    break
+        except Exception as e:
+            logger.warning(f"Failed to load logo for about dialog: {e}")
+
+        # Title
+        title_label = ttk.Label(
+            main_frame,
+            text="FIT Detector Ageing Analysis",
+            font=("TkDefaultFont", 16, "bold"),
+        )
+        title_label.pack(pady=(0, 10))
+
+        # Version
+        version_label = ttk.Label(
+            main_frame, text="Version: 1.0.0", font=("TkDefaultFont", 10)
+        )
+        version_label.pack(pady=(0, 20))
+
+        # Description
+        description_text = """
 A comprehensive tool for analyzing ageing effects in FIT detector data.
 
 Features:
@@ -972,10 +1171,26 @@ Features:
 • Reference channel calculations
 • Ageing factor computation and normalization
 • Interactive visualization and plotting
+• Integrated charge analysis
+• Time series analysis
+        """
 
-Version: 1.0.0
-"""
-        messagebox.showinfo("About", about_text)
+        description_label = ttk.Label(
+            main_frame,
+            text=description_text,
+            font=("TkDefaultFont", 9),
+            justify=tk.LEFT,
+        )
+        description_label.pack(pady=(0, 20))
+
+        # Close button
+        close_button = ttk.Button(
+            main_frame, text="Close", command=about_window.destroy
+        )
+        close_button.pack(pady=(20, 0))
+
+        # Handle window close event
+        about_window.protocol("WM_DELETE_WINDOW", about_window.destroy)
 
     def _on_closing(self):
         """Handle window closing."""
