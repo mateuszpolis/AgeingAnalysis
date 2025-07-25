@@ -162,11 +162,14 @@ class IntegratedChargeService:
         unique_values.sort()
         return unique_values
 
-    def integrate_charge_for_config(self, config: Config) -> None:
+    def integrate_charge_for_config(
+        self, config: Config, progress_callback=None
+    ) -> None:
         """Integrate charge for a config.
 
         Args:
             config: The config to integrate charge for.
+            progress_callback: Optional callback function to report progress.
         """
         current_integrated_charge = (
             self.cfd_rate_integration_service.get_empty_pm_channel_dict(
@@ -174,10 +177,16 @@ class IntegratedChargeService:
             )
         )
         sorted_datasets = sorted(config.datasets, key=lambda x: x.date)
+        total_datasets = len(sorted_datasets)
 
         # For the first dataset, save a copy of the initial (empty) integrated charge
         first_dataset_charge = copy.deepcopy(current_integrated_charge)
         sorted_datasets[0].save_integrated_charge(first_dataset_charge)
+
+        if progress_callback:
+            progress_callback(
+                0, f"Initialized integrated charge for {sorted_datasets[0].date}"
+            )
 
         for i in range(1, len(sorted_datasets)):
             start_date = datetime.datetime.strptime(
@@ -186,6 +195,15 @@ class IntegratedChargeService:
             end_date = datetime.datetime.strptime(
                 sorted_datasets[i].date, "%Y-%m-%d"
             ).date()
+
+            if progress_callback:
+                progress = (i / total_datasets) * 100
+                progress_callback(
+                    progress,
+                    f"Getting integrated charge from {start_date} to {end_date} "
+                    f"(Dataset {i+1} of {total_datasets})",
+                )
+
             integrated_charge = (
                 self.cfd_rate_integration_service.get_integrated_cfd_rate(
                     start_date, end_date, multiply_by_mu=True
@@ -201,4 +219,19 @@ class IntegratedChargeService:
             dataset_charge = copy.deepcopy(current_integrated_charge)
             sorted_datasets[i].save_integrated_charge(dataset_charge)
 
+            if progress_callback:
+                progress = ((i + 1) / total_datasets) * 100
+                progress_callback(
+                    progress,
+                    f"Completed integrated charge for {sorted_datasets[i].date}",
+                )
+
+        if progress_callback:
+            progress_callback(100, "Saving configuration...")
+
         config.save()
+
+        if progress_callback:
+            progress_callback(
+                100, "Integrated charge calculation completed successfully!"
+            )

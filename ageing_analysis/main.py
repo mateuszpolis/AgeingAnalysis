@@ -17,6 +17,7 @@ from ageing_analysis.services.integrated_charge_service import IntegratedChargeS
 
 from .entities import Config
 from .gui import AgeingVisualizationWindow, ConfigGeneratorWidget, ProgressWindow
+from .gui.integrated_charge_progress_window import IntegratedChargeProgressWindow
 from .services import (
     AgeingCalculationService,
     DataNormalizer,
@@ -394,14 +395,43 @@ class AgeingAnalysisApp:
 
     def _get_integrated_charge(self):
         """Handle the Get Integrated Charge button click."""
-        integrated_charge_service = IntegratedChargeService()
-        integrated_charge_service.integrate_charge_for_config(self.config)
+        # Create progress window
+        self.integrated_charge_progress = IntegratedChargeProgressWindow(
+            self.root, on_complete=self._integrated_charge_complete
+        )
 
+        # Start the integrated charge calculation with progress updates
+        self.integrated_charge_progress.start_calculation(
+            self._perform_integrated_charge_calculation
+        )
+
+    def _perform_integrated_charge_calculation(self):
+        """Perform the integrated charge calculation with progress updates."""
+        try:
+            integrated_charge_service = IntegratedChargeService()
+
+            # Define progress callback function
+            def progress_callback(value, status):
+                if hasattr(self, "integrated_charge_progress"):
+                    self.integrated_charge_progress.update_progress(value, status)
+                    self.integrated_charge_progress.add_log_message(status)
+
+            # Perform the calculation with progress updates
+            integrated_charge_service.integrate_charge_for_config(
+                self.config, progress_callback
+            )
+
+        except Exception as e:
+            error_msg = f"Integrated charge calculation failed: {str(e)}"
+            logger.error(error_msg)
+            raise
+
+    def _integrated_charge_complete(self):
+        """Handle completion of integrated charge calculation."""
         messagebox.showinfo(
             "Get Integrated Charge",
             "Integrated charge calculation completed successfully.",
         )
-
         self._update_integrated_charge_info()
 
     def _create_status_bar(self):
