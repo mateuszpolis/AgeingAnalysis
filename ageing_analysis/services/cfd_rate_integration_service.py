@@ -52,6 +52,16 @@ class CFDRateIntegrationService:
                 # Ensure date column is datetime.date type
                 df_existing["date"] = pd.to_datetime(df_existing["date"]).dt.date
 
+                # Ensure consistent date types before concatenation
+                if not df_existing.empty and not df_new.empty:
+                    # Ensure both DataFrames have date objects
+                    df_existing["date"] = df_existing["date"].apply(
+                        lambda x: x.date() if hasattr(x, "date") else x
+                    )
+                    df_new["date"] = df_new["date"].apply(
+                        lambda x: x.date() if hasattr(x, "date") else x
+                    )
+
                 # Combine existing and new data
                 df_combined = pd.concat([df_existing, df_new], ignore_index=True)
             except Exception as e:
@@ -134,7 +144,7 @@ class CFDRateIntegrationService:
 
         # Required record timestamps: start_date+1 to end_date
         required_records = [
-            start_date + datetime.timedelta(days=i)
+            (start_date + datetime.timedelta(days=i))
             for i in range(1, (end_date - start_date).days + 1)
         ]
 
@@ -146,8 +156,12 @@ class CFDRateIntegrationService:
                 missing_ranges[element_name] = [(start_date, end_date)]
                 continue
 
+            # Ensure consistent date types for comparison
+            available_records_normalized = {
+                d.date() if hasattr(d, "date") else d for d in available_records
+            }
             missing_records = sorted(
-                d for d in required_records if d not in available_records
+                d for d in required_records if d not in available_records_normalized
             )
 
             # Group missing_records into contiguous ranges
@@ -214,13 +228,23 @@ class CFDRateIntegrationService:
 
         try:
             df = pd.read_parquet(filename)
+            # Ensure date column is properly converted to date objects
             df["date"] = pd.to_datetime(df["date"]).dt.date
 
             # For a range start_date to end_date, we want integrations that end on dates
-            # from start_date+1 to end_date+1 (since integration periods are
+            # from start_date+1 to end_date (since integration periods are
             # start_date 12pm to end_date 12pm)
             query_start = start_date + datetime.timedelta(days=1)
-            query_end = end_date + datetime.timedelta(days=1)
+            query_end = end_date
+
+            # Ensure both sides of comparison are date objects
+            df["date"] = df["date"].apply(
+                lambda x: x.date() if hasattr(x, "date") else x
+            )
+            query_start = (
+                query_start.date() if hasattr(query_start, "date") else query_start
+            )
+            query_end = query_end.date() if hasattr(query_end, "date") else query_end
 
             # Filter by date range
             mask = (df["date"] >= query_start) & (df["date"] <= query_end)
@@ -366,6 +390,8 @@ class CFDRateIntegrationService:
             start_date, end_date, all_datapoints, filename
         )
 
+        print("Missing ranges: ", missing_ranges)
+
         if missing_ranges:
             # Process missing ranges in chunks
             total_integrated_data: pd.DataFrame = pd.DataFrame(
@@ -373,15 +399,24 @@ class CFDRateIntegrationService:
             )
 
             # Process missing ranges in chunks
-            for range_start, range_end in missing_ranges.keys():
-                logger.info(f"Processing missing range: {range_start} to {range_end}")
+            for r in missing_ranges:
+                logger.info(f"Processing missing range: {r}")
                 chunk_integrated_data = self._process_date_range_in_chunks(
-                    range_start,
-                    range_end,
-                    missing_ranges[(range_start, range_end)],
-                    chunk_size_days,
+                    r[0], r[1], missing_ranges[r], chunk_size_days
                 )
-                if not chunk_integrated_data.empty:
+                # Handle concatenation with proper dtype handling
+                if total_integrated_data.empty:
+                    total_integrated_data = chunk_integrated_data
+                elif chunk_integrated_data.empty:
+                    # Keep total_integrated_data as is
+                    pass
+                else:
+                    # Both are non-empty, align dtypes and concatenate
+                    for col in total_integrated_data.columns:
+                        if col in chunk_integrated_data.columns:
+                            chunk_integrated_data[col] = chunk_integrated_data[
+                                col
+                            ].astype(total_integrated_data[col].dtype)
                     total_integrated_data = pd.concat(
                         [total_integrated_data, chunk_integrated_data],
                         ignore_index=True,
@@ -494,15 +529,21 @@ class CFDRateIntegrationService:
         logger.info(f"Processing date range in chunks: {start_date} to {end_date}")
         logger.info(f"Chunk size: {chunk_size_days} days")
 
+        print("Start date: ", start_date)
+        print("End date: ", end_date)
+
         all_integrated_data = []
         # First record we need is for start_date+1
         current_record_date = start_date
 
-        while current_record_date <= end_date:
+        while current_record_date < end_date:
             # Determine the end of this chunk of record dates
             chunk_record_end_date = min(
                 current_record_date + datetime.timedelta(days=chunk_size_days), end_date
             )
+
+            print("Current record date: ", current_record_date)
+            print("Chunk record end date: ", chunk_record_end_date)
 
             logger.info(
                 f"Processing chunk of records: {current_record_date} to "
@@ -518,7 +559,7 @@ class CFDRateIntegrationService:
                 all_integrated_data.append(chunk_data)
 
             # Move to next chunk of record dates
-            current_record_date = chunk_record_end_date + datetime.timedelta(days=1)
+            current_record_date = chunk_record_end_date
 
         if all_integrated_data:
             return pd.concat(all_integrated_data, ignore_index=True)
@@ -660,7 +701,17 @@ class CFDRateIntegrationService:
 
         missing_df = pd.DataFrame(missing_records)
 
-        combined_data = pd.concat([integrated_data, missing_df], ignore_index=True)
+        # Handle concatenation with proper dtype handling
+        if integrated_data.empty:
+            combined_data = missing_df
+        elif missing_df.empty:
+            combined_data = integrated_data
+        else:
+            # Both are non-empty, align dtypes and concatenate
+            for col in integrated_data.columns:
+                if col in missing_df.columns:
+                    missing_df[col] = missing_df[col].astype(integrated_data[col].dtype)
+            combined_data = pd.concat([integrated_data, missing_df], ignore_index=True)
 
         combined_data = combined_data.sort_values(
             ["timestamp", "element_name"]

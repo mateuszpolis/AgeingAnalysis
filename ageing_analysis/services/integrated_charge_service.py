@@ -1,8 +1,8 @@
 """Integrated charge service for FIT detector ageing analysis."""
 
 import copy
-import datetime
 import logging
+from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 from ageing_analysis.entities.config import Config
@@ -189,12 +189,8 @@ class IntegratedChargeService:
             )
 
         for i in range(1, len(sorted_datasets)):
-            start_date = datetime.datetime.strptime(
-                sorted_datasets[i - 1].date, "%Y-%m-%d"
-            ).date()
-            end_date = datetime.datetime.strptime(
-                sorted_datasets[i].date, "%Y-%m-%d"
-            ).date()
+            start_date = datetime.strptime(str(sorted_datasets[i - 1].date), "%Y-%m-%d")
+            end_date = datetime.strptime(str(sorted_datasets[i].date), "%Y-%m-%d")
 
             if progress_callback:
                 progress = (i / total_datasets) * 100

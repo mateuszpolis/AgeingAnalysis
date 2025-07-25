@@ -974,10 +974,9 @@ class TestCFDRateIntegrationService:
         )
 
         # Assert
-        assert len(result) == 3
+        assert len(result) == 2
         assert result.iloc[0]["date"] == datetime.date(2025, 1, 3)
         assert result.iloc[1]["date"] == datetime.date(2025, 1, 4)
-        assert result.iloc[2]["date"] == datetime.date(2025, 1, 5)
 
         # Clean up
         os.remove(test_filename)
@@ -1186,7 +1185,7 @@ class TestCFDRateIntegrationService:
 
         # Act
         result = self.service.get_integrated_cfd_rate(
-            start_date, end_date, filename=test_filename
+            start_date, end_date, filename=test_filename, include_pmc9=False
         )
 
         # Assert
@@ -1439,9 +1438,8 @@ class TestCFDRateIntegrationService:
         result_1_2 = self.service._query_integrated_cfd_rate(
             datetime.date(2025, 7, 1), datetime.date(2025, 7, 2), filename=test_filename
         )
-        assert len(result_1_2) == 2
+        assert len(result_1_2) == 1
         assert result_1_2.iloc[0]["date"] == datetime.date(2025, 7, 2)
-        assert result_1_2.iloc[1]["date"] == datetime.date(2025, 7, 3)
 
         # Query for July 1-3 should return July 2, July 3, and July 4:
         # - July 1 12pm to July 2 12pm → July 2
@@ -1450,10 +1448,9 @@ class TestCFDRateIntegrationService:
         result_1_3 = self.service._query_integrated_cfd_rate(
             datetime.date(2025, 7, 1), datetime.date(2025, 7, 3), filename=test_filename
         )
-        assert len(result_1_3) == 3
+        assert len(result_1_3) == 2
         assert result_1_3.iloc[0]["date"] == datetime.date(2025, 7, 2)
         assert result_1_3.iloc[1]["date"] == datetime.date(2025, 7, 3)
-        assert result_1_3.iloc[2]["date"] == datetime.date(2025, 7, 4)
 
         # Query for July 2-3 should return July 3 and July 4:
         # - July 2 12pm to July 3 12pm → July 3
@@ -1461,9 +1458,8 @@ class TestCFDRateIntegrationService:
         result_2_3 = self.service._query_integrated_cfd_rate(
             datetime.date(2025, 7, 2), datetime.date(2025, 7, 3), filename=test_filename
         )
-        assert len(result_2_3) == 2
+        assert len(result_2_3) == 1
         assert result_2_3.iloc[0]["date"] == datetime.date(2025, 7, 3)
-        assert result_2_3.iloc[1]["date"] == datetime.date(2025, 7, 4)
 
         # Clean up
         os.remove(test_filename)
