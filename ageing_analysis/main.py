@@ -347,23 +347,6 @@ class AgeingAnalysisApp:
         header_frame = ttk.Frame(main_frame)
         header_frame.pack(fill=tk.X, pady=(0, 20))
 
-        # Logo (if available)
-        self.logo_label = None
-        try:
-            logo_paths = ["assets/logo.png", "assets/logo.gif", "logo.png", "logo.gif"]
-
-            for logo_path in logo_paths:
-                if os.path.exists(logo_path):
-                    logo_image = tk.PhotoImage(file=logo_path)
-                    logo_image = logo_image.subsample(8, 8)
-                    self.logo_label = ttk.Label(header_frame, image=logo_image)
-                    self.logo_label.image = logo_image  # Keep a reference
-                    self.logo_label.pack(side=tk.LEFT, padx=(0, 20))
-                    logger.info(f"Logo loaded from: {logo_path}")
-                    break
-        except Exception as e:
-            logger.warning(f"Failed to load logo: {e}")
-
         # Title
         title_label = ttk.Label(
             header_frame,
@@ -1130,22 +1113,6 @@ class AgeingAnalysisApp:
         # Main frame
         main_frame = ttk.Frame(about_window, padding="20")
         main_frame.pack(fill=tk.BOTH, expand=True)
-
-        # Logo
-        logo_label = None
-        try:
-            logo_paths = ["assets/logo.png", "assets/logo.gif", "logo.png", "logo.gif"]
-            for logo_path in logo_paths:
-                if os.path.exists(logo_path):
-                    logo_image = tk.PhotoImage(file=logo_path)
-                    # Resize logo for about dialog
-                    logo_image = logo_image.subsample(3, 3)  # Reduce size
-                    logo_label = ttk.Label(main_frame, image=logo_image)
-                    logo_label.image = logo_image  # Keep a reference
-                    logo_label.pack(pady=(0, 20))
-                    break
-        except Exception as e:
-            logger.warning(f"Failed to load logo for about dialog: {e}")
 
         # Title
         title_label = ttk.Label(

@@ -49,9 +49,14 @@ class TimeSeriesTab:
         self.gaussian_var = tk.BooleanVar(value=True)
         self.weighted_var = tk.BooleanVar(value=False)
         self.x_axis_var = tk.StringVar(value="date")
+        self.x_log_var = tk.BooleanVar(value=False)
+        self.y_log_var = tk.BooleanVar(value=False)
         self._update_pending = False
         self.plot_data_info: Dict[Tuple[str, int], Dict[str, Any]] = {}
         self.tooltip_annotation = None
+        self.x_log_checkbutton = (
+            None  # Initialize to None, will be set in _create_control_panel
+        )
         self._create_layout()
         if results_data:
             self._process_data()
@@ -84,14 +89,14 @@ class TimeSeriesTab:
                 text="Date",
                 variable=self.x_axis_var,
                 value="date",
-                command=self._update_plot,
+                command=self._on_x_axis_change,
             ).pack(anchor=tk.W)
             ttk.Radiobutton(
                 x_axis_frame,
                 text="Integrated Charge",
                 variable=self.x_axis_var,
                 value="integrated_charge",
-                command=self._update_plot,
+                command=self._on_x_axis_change,
             ).pack(anchor=tk.W)
         else:
             ttk.Label(
@@ -99,6 +104,12 @@ class TimeSeriesTab:
                 text="Date (Integrated charge not available)",
                 foreground="gray",
             ).pack(anchor=tk.W)
+            # Disable x-axis log option when integrated charge is not available
+            if (
+                hasattr(self, "x_log_checkbutton")
+                and self.x_log_checkbutton is not None
+            ):
+                self.x_log_checkbutton.config(state="disabled")
 
         # Method selection
         method_frame = ttk.LabelFrame(
@@ -117,6 +128,26 @@ class TimeSeriesTab:
             variable=self.weighted_var,
             command=self._update_plot,
         ).pack(anchor=tk.W)
+
+        # Scale options
+        scale_frame = ttk.LabelFrame(
+            self.control_frame, text="Scale Options", padding="10"
+        )
+        scale_frame.pack(fill=tk.X, padx=10, pady=5)
+        self.x_log_checkbutton = ttk.Checkbutton(
+            scale_frame,
+            text="Logarithmic X-Axis",
+            variable=self.x_log_var,
+            command=self._update_plot,
+        )
+        self.x_log_checkbutton.pack(anchor=tk.W)
+        ttk.Checkbutton(
+            scale_frame,
+            text="Logarithmic Y-Axis",
+            variable=self.y_log_var,
+            command=self._update_plot,
+        ).pack(anchor=tk.W)
+
         self.channel_frame = ttk.LabelFrame(
             self.control_frame, text="Channel Selection", padding="10"
         )
@@ -130,6 +161,10 @@ class TimeSeriesTab:
             button_frame, text="Deselect All", command=self._deselect_all_channels
         ).pack(side=tk.LEFT, padx=5)
         self._create_scrollable_channel_frame()
+
+        # Initialize x-axis log option state after all UI elements are created
+        # X-axis log scale is now supported for both dates and integrated charge
+        # So we don't need to disable it based on selection
 
     def _create_scrollable_channel_frame(self):
         canvas = tk.Canvas(self.channel_frame, highlightthickness=0)
@@ -265,6 +300,9 @@ class TimeSeriesTab:
 
     def _setup_empty_plot(self):
         self.ax.clear()
+        # Reset to linear scales for empty plot
+        self.ax.set_xscale("linear")
+        self.ax.set_yscale("linear")
         self.ax.text(
             0.5,
             0.5,
@@ -382,6 +420,12 @@ class TimeSeriesTab:
             channel_var.set(True)
         for module_var in self.module_vars.values():
             module_var.set(True)
+        self._update_plot()
+
+    def _on_x_axis_change(self):
+        """Handle x-axis selection change and update log scale option availability."""
+        # X-axis log scale is now supported for both dates and integrated charge
+        # So we don't need to disable it based on selection
         self._update_plot()
 
     def _deselect_all_channels(self):
@@ -605,23 +649,64 @@ class TimeSeriesTab:
                 max_ticks = min(8, max(3, num_datasets))
                 from matplotlib.ticker import MaxNLocator
 
-                self.ax.xaxis.set_major_locator(
-                    MaxNLocator(nbins=max_ticks, prune="both")
-                )
-                self.ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
+                # Apply logarithmic scaling if requested
+                if self.x_log_var.get():
+                    # For dates with log scale, we need to handle formatting differently
+                    # Convert dates to numeric values for log scale
+                    self.ax.set_xscale("log")
+                    # Use a custom formatter for log scale dates
+                    from matplotlib.ticker import FuncFormatter
+
+                    def date_formatter(x, pos):
+                        try:
+                            # Convert numeric value back to date
+                            date = mdates.num2date(x)
+                            return date.strftime("%Y-%m-%d")
+                        except ValueError:
+                            return ""
+
+                    self.ax.xaxis.set_major_formatter(FuncFormatter(date_formatter))
+                    self.ax.xaxis.set_major_locator(
+                        MaxNLocator(nbins=max_ticks, prune="both")
+                    )
+                else:
+                    # Linear scale for dates
+                    self.ax.set_xscale("linear")
+                    self.ax.xaxis.set_major_locator(
+                        MaxNLocator(nbins=max_ticks, prune="both")
+                    )
+                    self.ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
+
                 plt.setp(self.ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
                 self.ax.tick_params(axis="x", which="major", pad=10)
 
             self.ax.set_ylabel("Normalized Ageing Factor")
+
+            # Apply logarithmic scaling for y-axis if requested
+            if self.y_log_var.get():
+                self.ax.set_yscale("log")
+            else:
+                self.ax.set_yscale("linear")
+
             title_methods = []
             if show_gaussian:
                 title_methods.append("Gaussian")
             if show_weighted:
                 title_methods.append("Weighted")
+
+            # Add scale information to title
+            scale_info = []
+            if self.x_log_var.get():
+                scale_info.append("Log X")
+            if self.y_log_var.get():
+                scale_info.append("Log Y")
+
             title = (
                 f"Ageing Analysis - {' & '.join(title_methods)} Method"
                 f"{'s' if len(title_methods) > 1 else ''} vs {x_title}"
             )
+            if scale_info:
+                title += f" ({', '.join(scale_info)})"
             self.ax.set_title(title)
             self.ax.grid(True, alpha=0.3)
             if channel_data:
@@ -643,9 +728,15 @@ class TimeSeriesTab:
                 }
             )
             axis_text = "integrated charge" if use_integrated_charge else "date"
+            scale_text = ""
+            if self.x_log_var.get():
+                scale_text += " (Log X)"
+            if self.y_log_var.get():
+                scale_text += " (Log Y)"
+
             self.status_var.set(
                 f"Displaying {unique_channels} channels using {method_text} method"
-                f"{'s' if len(title_methods) > 1 else ''} vs {axis_text}"
+                f"{'s' if len(title_methods) > 1 else ''} vs {axis_text}{scale_text}"
             )
         except Exception as e:
             error_msg = f"Error updating plot: {str(e)}"

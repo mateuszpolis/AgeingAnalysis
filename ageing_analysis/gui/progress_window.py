@@ -1,7 +1,6 @@
 """Progress window for FIT detector ageing analysis."""
 
 import logging
-import os
 import threading
 import time
 import tkinter as tk
@@ -47,28 +46,13 @@ class ProgressWindow:
         header_frame = ttk.Frame(main_frame)
         header_frame.pack(pady=(0, 10))
 
-        # Logo (if available)
-        try:
-            logo_paths = ["assets/logo.png", "assets/logo.gif", "logo.png", "logo.gif"]
-            for logo_path in logo_paths:
-                if os.path.exists(logo_path):
-                    logo_image = tk.PhotoImage(file=logo_path)
-                    # Resize logo for progress window
-                    logo_image = logo_image.subsample(4, 4)  # Reduce size
-                    logo_label = ttk.Label(header_frame, image=logo_image)
-                    logo_label.image = logo_image  # Keep a reference
-                    logo_label.pack(side=tk.LEFT, padx=(0, 10))
-                    break
-        except Exception:  # nosec B110
-            pass  # Logo not available, continue without it
-
         # Title
         title_label = ttk.Label(
             header_frame,
             text="FIT Detector Ageing Analysis",
             font=("TkDefaultFont", 16, "bold"),
         )
-        title_label.pack(side=tk.LEFT)
+        title_label.pack()
 
         # Progress bar
         self.progress_var = tk.DoubleVar()
