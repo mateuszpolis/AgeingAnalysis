@@ -229,7 +229,7 @@ class TimeSeriesTab:
                 f"PM: {info['pm']}\n"
                 f"Channel: {info['channel']}\n"
                 f"Method: {info['method']}\n"
-                f"Integrated Charge: {info['integrated_charge']}\n"
+                f"Integrated Charge: {info['integrated_charge']:.4f}\n"
                 f"Date: {info['date']}\n"
                 f"Value: {info['value']:.4f}"
             )
@@ -246,7 +246,13 @@ class TimeSeriesTab:
             xy=(x, y),
             xytext=(20, 20),
             textcoords="offset points",
-            bbox=dict(boxstyle="round,pad=0.5", fc="yellow", alpha=0.8),
+            bbox=dict(
+                boxstyle="round,pad=0.5",
+                fc="yellow",
+                ec="black",
+                alpha=1.0,
+                linewidth=1,
+            ),
             arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=0"),
         )
         self.canvas.draw_idle()
@@ -566,7 +572,6 @@ class TimeSeriesTab:
                     for idx, (x_val, value) in enumerate(zip(x_values, values)):
                         point_key = (label, idx)
                         if use_integrated_charge:
-                            x_display = f"{x_val:.0f}"
                             # Get the correct date for this specific point
                             point_date = dates[idx] if "dates" in locals() else date_str
                             # Store both integrated charge and date for tooltip
@@ -574,7 +579,7 @@ class TimeSeriesTab:
                                 "pm": pm_id,
                                 "channel": channel_name,
                                 "method": method_label,
-                                "integrated_charge": x_display,
+                                "integrated_charge": x_val,
                                 "date": point_date,
                                 "value": value,
                             }
