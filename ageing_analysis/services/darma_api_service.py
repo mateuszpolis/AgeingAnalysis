@@ -9,13 +9,45 @@ from pathlib import Path
 
 import pandas as pd
 
-# Import DA_batch_client functions
-from ..utils.da_batch_client.DA_batch_client import (
-    get_result_file,
-    request_and_save_parsed_data,
-    save_result_file,
-    upload_file,
-)
+# Import DA_batch_client functions (optional - may not be available in all environments)
+try:
+    from ..utils.da_batch_client.DA_batch_client import (
+        get_result_file,
+        request_and_save_parsed_data,
+        save_result_file,
+        upload_file,
+    )
+
+    DA_BATCH_CLIENT_AVAILABLE = True
+except ImportError:
+    # DA_batch_client not available (e.g., in CI environment)
+    DA_BATCH_CLIENT_AVAILABLE = False
+
+    # Create dummy functions that raise informative errors
+    def get_result_file(client_id, flask_url):
+        """Raise an error if DA_batch_client is not available."""
+        raise ImportError(
+            "DA_batch_client not available. This module contains proprietary code."
+        )
+
+    def request_and_save_parsed_data(client_ids, parsed_data_url, output_path):
+        """Raise an error if DA_batch_client is not available."""
+        raise ImportError(
+            "DA_batch_client not available. This module contains proprietary code."
+        )
+
+    def save_result_file(base64_content, output_path):
+        """Raise an error if DA_batch_client is not available."""
+        raise ImportError(
+            "DA_batch_client not available. This module contains proprietary code."
+        )
+
+    def upload_file(file_path, flask_url):
+        """Raise an error if DA_batch_client is not available."""
+        raise ImportError(
+            "DA_batch_client not available. This module contains proprietary code."
+        )
+
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +94,10 @@ class DarmaApiService:
         Returns:
             A pandas DataFrame with columns: timestamp, value, element_name
         """
+        if not DA_BATCH_CLIENT_AVAILABLE:
+            logger.warning("DA_batch_client not available. Returning empty DataFrame.")
+            return pd.DataFrame(columns=["timestamp", "value", "element_name"])
+
         # Create an input file
         input_file = self._create_input_file(
             time_from, time_to, schema, elements, aliases
@@ -86,6 +122,10 @@ class DarmaApiService:
         Returns:
             List of paths to the output files created.
         """
+        if not DA_BATCH_CLIENT_AVAILABLE:
+            logger.warning("DA_batch_client not available. Returning empty file list.")
+            return []
+
         output_files = []
 
         try:

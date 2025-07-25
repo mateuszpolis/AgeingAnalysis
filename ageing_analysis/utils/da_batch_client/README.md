@@ -1,5 +1,7 @@
 # DA_batch_client
 
+**Note**: The `DA_batch_client.py` file contains proprietary code and is not included in this repository for legal reasons. The application is designed to handle the missing file gracefully by returning empty DataFrames when the module is not available.
+
 This project is a client instance of the DA_batch_client application for the DCS.
 
 ## Getting started
