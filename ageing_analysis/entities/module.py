@@ -6,7 +6,6 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 
-from ..utils.normalization import normalize_channel_name
 from ..utils.validation import validate_csv
 from .channel import Channel
 
@@ -23,7 +22,7 @@ class Module:
         is_reference: bool = False,
         ref_channels: Optional[List[int]] = None,
         validate_header: bool = False,
-        integrated_charge_data: Optional[Dict[str, Dict[str, float]]] = None,
+        integrated_charge_data: Optional[Dict[str, float]] = None,
     ):
         """Initialize a module and validate its file.
 
@@ -44,9 +43,7 @@ class Module:
         self.ref_channels: List[int] = ref_channels or []
         self.channels: List[Channel] = []
         self._ref_channel_pointers: List[Channel] = []
-        self.integrated_charge_data: Optional[
-            Dict[str, Dict[str, float]]
-        ] = integrated_charge_data
+        self.integrated_charge_data: Optional[Dict[str, float]] = integrated_charge_data
 
         # Validate file existence and format
         if not os.path.exists(path):
@@ -77,25 +74,9 @@ class Module:
 
         # Get integrated charge for this channel if available
         integrated_charge = None
-        if (
-            self.integrated_charge_data
-            and self.identifier in self.integrated_charge_data
-        ):
-            pm_charge_data = self.integrated_charge_data[self.identifier]
-
-            # Try to find the channel with normalized names
-            normalized_channel_name = normalize_channel_name(channel_name)
-
-            # Look for the channel in the charge data using normalized names
-            for config_channel_name, charge_value in pm_charge_data.items():
-                normalized_config_name = normalize_channel_name(config_channel_name)
-                if normalized_config_name == normalized_channel_name:
-                    integrated_charge = charge_value
-                    logger.debug(
-                        f"Found integrated charge {charge_value} for channel "
-                        f"{channel_name} (config: {config_channel_name})"
-                    )
-                    break
+        if self.integrated_charge_data:
+            channel_name_lower = f"Ch{channel_number:02d}"
+            integrated_charge = self.integrated_charge_data[channel_name_lower]
 
         channel = Channel(
             channel_name,
@@ -121,24 +102,27 @@ class Module:
         """
         return self._ref_channel_pointers
 
-    def to_dict(
-        self, include_signal_data: bool = False, include_total_signal_data: bool = True
-    ) -> Dict:
-        """Convert the module to a dictionary.
+    def save_integrated_charge(self, integrated_charge: Dict[str, float]) -> None:
+        """Save the integrated charge for the module."""
+        self.integrated_charge_data = integrated_charge
 
-        Args:
-            include_signal_data: Whether to include signal data in the output.
-            include_total_signal_data: Whether to include total signal in the output.
+    def get_integrated_charge_data(self) -> Dict[str, float]:
+        """Get the integrated charge data for all channels in the module.
+
+        Returns:
+            Dictionary mapping channel names to their integrated charge values.
+        """
+        return self.integrated_charge_data
+
+    def to_dict(self) -> Dict:
+        """Convert the module to a dictionary.
 
         Returns:
             Dictionary representation of the module.
         """
         return {
             "identifier": self.identifier,
-            "channels": [
-                channel.to_dict(include_signal_data, include_total_signal_data)
-                for channel in self.channels
-            ],
+            "channels": [channel.to_dict() for channel in self.channels],
         }
 
     def __str__(self):

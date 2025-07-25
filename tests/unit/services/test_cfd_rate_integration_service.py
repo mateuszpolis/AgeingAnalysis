@@ -1707,7 +1707,7 @@ class TestCFDRateIntegrationService:
 
         # Act
         result = self.service._sum_integrated_cfd_rate(
-            integrated_data, multiply_by_mu=False
+            integrated_data, multiply_by_mu=False, include_pmc9=False
         )
 
         # Assert
@@ -1744,7 +1744,7 @@ class TestCFDRateIntegrationService:
 
         # Act
         result = self.service._sum_integrated_cfd_rate(
-            integrated_data, multiply_by_mu=True
+            integrated_data, multiply_by_mu=True, include_pmc9=False
         )
 
         # Assert
@@ -1785,7 +1785,7 @@ class TestCFDRateIntegrationService:
 
         # Act
         result = self.service._sum_integrated_cfd_rate(
-            integrated_data, multiply_by_mu=True
+            integrated_data, multiply_by_mu=True, include_pmc9=False
         )
 
         # Assert
@@ -1810,10 +1810,10 @@ class TestCFDRateIntegrationService:
 
         # Act
         result_without_mu = self.service._sum_integrated_cfd_rate(
-            integrated_data, multiply_by_mu=False
+            integrated_data, multiply_by_mu=False, include_pmc9=False
         )
         result_with_mu = self.service._sum_integrated_cfd_rate(
-            integrated_data, multiply_by_mu=True
+            integrated_data, multiply_by_mu=True, include_pmc9=False
         )
 
         # Assert
@@ -1849,10 +1849,10 @@ class TestCFDRateIntegrationService:
 
         # Act
         result_without_mu = self.service.get_integrated_cfd_rate(
-            start_date, end_date, multiply_by_mu=False
+            start_date, end_date, multiply_by_mu=False, include_pmc9=False
         )
         result_with_mu = self.service.get_integrated_cfd_rate(
-            start_date, end_date, multiply_by_mu=True
+            start_date, end_date, multiply_by_mu=True, include_pmc9=False
         )
 
         # Assert
@@ -1867,3 +1867,41 @@ class TestCFDRateIntegrationService:
         mu = 43e-15
         assert abs(result_with_mu["PMA0"]["Ch01"] - 250.0 * mu) < 1e-20
         assert abs(result_with_mu["PMA0"]["Ch02"] - 450.0 * mu) < 1e-20
+
+    def test_get_empty_pm_channel_dict(self):
+        """Test that _get_empty_pm_channel_dict returns the correct structure."""
+        service = CFDRateIntegrationService()
+
+        result = service.get_empty_pm_channel_dict()
+
+        # Check that we have the expected PM types
+        assert "PMA0" in result
+        assert "PMA1" in result
+        assert "PMC0" in result
+        assert "PMC1" in result
+
+        # Check that each PM has channels with 0.0 values
+        for pm in result:
+            assert isinstance(result[pm], dict)
+            for channel in result[pm]:
+                assert result[pm][channel] == 0.0
+                # Check channel format (should be Ch01, Ch02, etc.)
+                assert channel.startswith("Ch")
+                assert len(channel) == 4  # "Ch01", "Ch02", etc.
+                assert channel[2:].isdigit()
+
+        # Check specific expected channels
+        assert "Ch01" in result["PMA0"]
+        assert "Ch12" in result["PMA0"]
+        assert "Ch01" in result["PMC0"]
+        assert "Ch12" in result["PMC0"]
+
+        # Check that PMA9 doesn't exist (as per _get_datapoints logic)
+        assert "PMA9" not in result
+
+        # Check that PMC9 only has channels 1-8 (as per _get_datapoints logic)
+        if "PMC9" in result:
+            assert "Ch09" not in result["PMC9"]
+            assert "Ch10" not in result["PMC9"]
+            assert "Ch11" not in result["PMC9"]
+            assert "Ch12" not in result["PMC9"]

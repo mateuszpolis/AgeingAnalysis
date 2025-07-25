@@ -52,7 +52,7 @@ class TestConfigIntegratedChargeValidation:
         module = config.datasets[0].modules[0]
         assert hasattr(module, "integrated_charge_data")
         assert module.integrated_charge_data is not None
-        assert "PMA0" in module.integrated_charge_data
+        assert "Ch01" in module.integrated_charge_data
 
     def test_config_with_invalid_integrated_charge_not_dict(self, tmp_path):
         """Test config loading with invalid integrated charge data (not dict)."""

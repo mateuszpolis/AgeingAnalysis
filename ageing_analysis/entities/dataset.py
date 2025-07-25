@@ -85,21 +85,13 @@ class Dataset:
 
             module_integrated_charge_data = None
             # Get integrated charge data for this module if available
-            print("Integrated charge data: ", integrated_charge_data)
             if integrated_charge_data:
                 # Normalize the module identifier to match config keys
                 normalized_identifier = normalize_pm_name(identifier)
 
-                # Look for the normalized identifier in the integrated charge data
-                for config_pm_name, pm_charge_data in integrated_charge_data.items():
-                    normalized_config_pm = normalize_pm_name(config_pm_name)
-                    if normalized_config_pm == normalized_identifier:
-                        module_integrated_charge_data = {identifier: pm_charge_data}
-                        logger.debug(
-                            f"Found integrated charge data for module {identifier} "
-                            f"(config: {config_pm_name})"
-                        )
-                        break
+                module_integrated_charge_data = integrated_charge_data[
+                    normalized_identifier
+                ]
 
             # Initialize Module with appropriate attributes
             module = Module(
@@ -172,14 +164,28 @@ class Dataset:
             }
         )
 
-    def to_dict(
-        self, include_signal_data: bool = False, include_total_signal_data: bool = True
-    ) -> Dict:
-        """Convert the dataset to a dictionary.
+    def save_integrated_charge(
+        self, integrated_charge: Dict[str, Dict[str, float]]
+    ) -> None:
+        """Save the integrated charge for the dataset."""
+        for module in self.modules:
+            module.save_integrated_charge(integrated_charge[module.identifier])
 
-        Args:
-            include_signal_data: Whether to include signal data.
-            include_total_signal_data: Whether to include total signal data.
+    def get_integrated_charge_data(self) -> Dict[str, Dict[str, float]]:
+        """Get the integrated charge data for all modules in the dataset.
+
+        Returns:
+            Dictionary mapping module identifiers to their integrated charge data.
+        """
+        charge_data = {}
+        for module in self.modules:
+            module_charge_data = module.get_integrated_charge_data()
+            if module_charge_data:  # Only include modules with charge data
+                charge_data[module.identifier] = module_charge_data
+        return charge_data
+
+    def to_dict(self) -> Dict:
+        """Convert the dataset to a dictionary.
 
         Returns:
             Dictionary representation of the dataset.
@@ -187,10 +193,7 @@ class Dataset:
         return {
             "date": self.date,
             "reference_means": self._reference_means,
-            "modules": [
-                module.to_dict(include_signal_data, include_total_signal_data)
-                for module in self.modules
-            ],
+            "modules": [module.to_dict() for module in self.modules],
         }
 
     def __str__(self):

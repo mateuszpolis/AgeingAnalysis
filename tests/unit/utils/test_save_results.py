@@ -16,54 +16,6 @@ from ageing_analysis.utils.save_results import (
 class TestSaveResults:
     """Test save_results function."""
 
-    def test_save_results_with_total_signal_data(self, tmp_path):
-        """Test saving results with total signal data included."""
-        # Create a mock config
-        mock_config = Mock()
-        mock_config.to_dict.return_value = {
-            "datasets": [
-                {
-                    "date": "2022-01-01",
-                    "modules": [
-                        {
-                            "identifier": "PMA0",
-                            "channels": [
-                                {
-                                    "name": "CH01",
-                                    "means": {
-                                        "gaussian_mean": 1.0,
-                                        "weighted_mean": 1.1,
-                                    },
-                                    "ageing_factors": {"gaussian_ageing_factor": 0.9},
-                                    "total_signal_data": {"0": 100, "1": 200},
-                                }
-                            ],
-                        }
-                    ],
-                }
-            ]
-        }
-
-        output_path = tmp_path / "test_results.json"
-        result_path = save_results(
-            mock_config, str(output_path), include_total_signal_data=True
-        )
-
-        # Verify the file was created
-        assert Path(result_path).exists()
-
-        # Verify the content
-        with open(result_path) as f:
-            data = json.load(f)
-
-        assert "datasets" in data
-        assert "metadata" in data
-        assert data["metadata"]["include_total_signal_data"] is True
-
-        # Check that total_signal_data is included
-        channel = data["datasets"][0]["modules"][0]["channels"][0]
-        assert "total_signal_data" in channel
-
     def test_save_results_without_total_signal_data(self, tmp_path):
         """Test saving results without total signal data."""
         # Create a mock config
@@ -92,9 +44,7 @@ class TestSaveResults:
         }
 
         output_path = tmp_path / "test_results.json"
-        result_path = save_results(
-            mock_config, str(output_path), include_total_signal_data=False
-        )
+        result_path = save_results(mock_config, str(output_path))
 
         # Verify the file was created
         assert Path(result_path).exists()
@@ -105,11 +55,6 @@ class TestSaveResults:
 
         assert "datasets" in data
         assert "metadata" in data
-        assert data["metadata"]["include_total_signal_data"] is False
-
-        # Check that total_signal_data is not included
-        channel = data["datasets"][0]["modules"][0]["channels"][0]
-        assert "total_signal_data" not in channel
 
     def test_save_results_default_behavior(self, tmp_path):
         """Test that save_results defaults to including total signal data."""
@@ -149,13 +94,7 @@ class TestSaveResults:
 
         # Verify the content
         with open(result_path) as f:
-            data = json.load(f)
-
-        assert data["metadata"]["include_total_signal_data"] is True
-
-        # Check that total_signal_data is included
-        channel = data["datasets"][0]["modules"][0]["channels"][0]
-        assert "total_signal_data" in channel
+            json.load(f)
 
     def test_save_results_auto_filename(self, tmp_path):
         """Test that save_results generates a filename when none is provided."""
@@ -168,7 +107,7 @@ class TestSaveResults:
             "pathlib.Path.exists", return_value=False
         ):
             # Call the function without mocking datetime
-            result_path = save_results(mock_config, include_total_signal_data=True)
+            result_path = save_results(mock_config)
 
         # Verify the path contains the expected pattern (without specific timestamp)
         assert "ageing_analysis_results" in result_path

@@ -1,7 +1,14 @@
 """Integrated charge service for FIT detector ageing analysis."""
 
+import copy
+import datetime
 import logging
 from typing import Dict, List, Optional, Tuple
+
+from ageing_analysis.entities.config import Config
+from ageing_analysis.services.cfd_rate_integration_service import (
+    CFDRateIntegrationService,
+)
 
 from ..utils.normalization import normalize_channel_name, normalize_pm_name
 
@@ -10,6 +17,10 @@ logger = logging.getLogger(__name__)
 
 class IntegratedChargeService:
     """Service for handling integrated charge operations."""
+
+    def __init__(self):
+        """Initialize the IntegratedChargeService."""
+        self.cfd_rate_integration_service = CFDRateIntegrationService()
 
     @staticmethod
     def normalize_channel_name(channel_name: str) -> str:
@@ -150,3 +161,44 @@ class IntegratedChargeService:
         unique_values = list({value[3] for value in charge_values})
         unique_values.sort()
         return unique_values
+
+    def integrate_charge_for_config(self, config: Config) -> None:
+        """Integrate charge for a config.
+
+        Args:
+            config: The config to integrate charge for.
+        """
+        current_integrated_charge = (
+            self.cfd_rate_integration_service.get_empty_pm_channel_dict(
+                include_pmc9=True
+            )
+        )
+        sorted_datasets = sorted(config.datasets, key=lambda x: x.date)
+
+        # For the first dataset, save a copy of the initial (empty) integrated charge
+        first_dataset_charge = copy.deepcopy(current_integrated_charge)
+        sorted_datasets[0].save_integrated_charge(first_dataset_charge)
+
+        for i in range(1, len(sorted_datasets)):
+            start_date = datetime.datetime.strptime(
+                sorted_datasets[i - 1].date, "%Y-%m-%d"
+            ).date()
+            end_date = datetime.datetime.strptime(
+                sorted_datasets[i].date, "%Y-%m-%d"
+            ).date()
+            integrated_charge = (
+                self.cfd_rate_integration_service.get_integrated_cfd_rate(
+                    start_date, end_date, multiply_by_mu=True
+                )
+            )
+
+            # Add the new integrated charge to the cumulative total
+            for pm, channels in integrated_charge.items():
+                for channel, value in channels.items():
+                    current_integrated_charge[pm][channel] += value
+
+            # Save a copy of the current cumulative integrated charge for this dataset
+            dataset_charge = copy.deepcopy(current_integrated_charge)
+            sorted_datasets[i].save_integrated_charge(dataset_charge)
+
+        config.save()

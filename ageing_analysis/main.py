@@ -13,6 +13,8 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import TclError, filedialog, messagebox, ttk
 
+from ageing_analysis.services.integrated_charge_service import IntegratedChargeService
+
 from .entities import Config
 from .gui import AgeingVisualizationWindow, ConfigGeneratorWidget, ProgressWindow
 from .services import (
@@ -139,9 +141,6 @@ class AgeingAnalysisApp:
             self.root = tk.Tk()
         else:
             self.root = tk.Toplevel(self.parent)
-
-        # Create the BooleanVar after root exists
-        self.save_total_signal_data = tk.BooleanVar(value=False)
 
         # Configure window
         self.root.title("AgeingAnalysis - FIT Detector Toolkit")
@@ -272,30 +271,6 @@ class AgeingAnalysisApp:
         analysis_frame = ttk.LabelFrame(main_frame, text="Analysis", padding="10")
         analysis_frame.pack(fill=tk.X, pady=(0, 20))
 
-        # Analysis options frame
-        options_frame = ttk.Frame(analysis_frame)
-        options_frame.pack(fill=tk.X, pady=(0, 10))
-
-        # Checkbox for saving total signal data
-        self.save_total_signal_checkbox = ttk.Checkbutton(
-            options_frame,
-            text="Save total signal data in results",
-            variable=self.save_total_signal_data,
-            onvalue=True,
-            offvalue=False,
-        )
-        self.save_total_signal_checkbox.pack(anchor=tk.W, pady=2)
-
-        # Help text for the checkbox
-        help_text = ttk.Label(
-            options_frame,
-            text="When checked, total signal will be included in the results file. "
-            "This allows to analyse histograms in the visualization window.",
-            font=("TkDefaultFont", 10),
-            foreground="gray",
-        )
-        help_text.pack(anchor=tk.W, pady=(0, 5))
-
         button_frame = ttk.Frame(analysis_frame)
         button_frame.pack(pady=10)
 
@@ -351,10 +326,7 @@ class AgeingAnalysisApp:
                     # Load results from file
                     results_data = load_results(self.results_path)
                 elif self.config:
-                    # Use current config data with checkbox setting
-                    results_data = self.config.to_dict(
-                        include_total_signal_data=self.save_total_signal_data.get()
-                    )
+                    results_data = self.config.to_dict()
 
                 self.visualization_window = AgeingVisualizationWindow(
                     self.root, results_data
@@ -422,15 +394,15 @@ class AgeingAnalysisApp:
 
     def _get_integrated_charge(self):
         """Handle the Get Integrated Charge button click."""
-        # TODO: Implement integrated charge calculation for
-        # configs without integrated charge data
+        integrated_charge_service = IntegratedChargeService()
+        integrated_charge_service.integrate_charge_for_config(self.config)
 
         messagebox.showinfo(
             "Get Integrated Charge",
-            "Integrated charge calculation feature is not yet implemented.\n\n"
-            "This feature will allow you to calculate integrated charge values "
-            "for configurations that don't have integrated charge data available.",
+            "Integrated charge calculation completed successfully.",
         )
+
+        self._update_integrated_charge_info()
 
     def _create_status_bar(self):
         """Create status bar at the bottom."""
@@ -867,9 +839,7 @@ class AgeingAnalysisApp:
         """Handle analysis completion."""
         try:
             # Display results first
-            results_dict = self.config.to_dict(
-                include_total_signal_data=self.save_total_signal_data.get()
-            )
+            results_dict = self.config.to_dict()
             self._display_results(results_dict)
 
             # Enable visualization button

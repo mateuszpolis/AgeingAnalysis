@@ -131,14 +131,16 @@ class Channel:
             {"gaussian_mean": gaussian_mean, "weighted_mean": weighted_mean}
         )
 
-    def to_dict(
-        self, include_signal_data: bool = False, include_total_signal_data: bool = True
-    ) -> Dict:
-        """Convert the Channel to a dictionary.
+    def get_integrated_charge(self) -> Optional[float]:
+        """Get the integrated charge value for the channel.
 
-        Args:
-            include_signal_data: Whether to include signal data in the output.
-            include_total_signal_data: Whether to include total signal in the output.
+        Returns:
+            The integrated charge value or None if not set.
+        """
+        return self.integrated_charge
+
+    def to_dict(self) -> Dict:
+        """Convert the Channel to a dictionary.
 
         Returns:
             Dictionary representation of the channel.
@@ -154,17 +156,8 @@ class Channel:
             "ageing_factors": self._ageing_factors,
         }
 
-        if include_total_signal_data and self.total_signal_data is not None:
-            channel_dict["total_signal_data"] = self.total_signal_data.to_dict()
-
         if self.integrated_charge is not None:
             channel_dict["integratedCharge"] = self.integrated_charge
-
-        if include_signal_data:
-            channel_dict["signal_data"] = self.data.to_dict()
-            channel_dict["noise_data"] = (
-                self.noise_data.to_dict() if self.noise_data is not None else None
-            )
 
         return channel_dict
 

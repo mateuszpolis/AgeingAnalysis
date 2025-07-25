@@ -22,6 +22,7 @@ class Config:
             config_path: Optional path to config file. If None, searches for
                 default files.
         """
+        self.config_path = config_path
         logger.debug("Loading config...")
 
         # Determine which config file to use
@@ -53,16 +54,19 @@ class Config:
         logger.debug(f"Loading configuration from {os.path.abspath(config_path)}")
 
         with open(config_path) as file:
-            config = json.load(file)
+            self.original_config = json.load(file)
 
         # Validate the 'inputs' field in the config file
-        if "inputs" not in config:
+        if "inputs" not in self.original_config:
             raise ValueError("inputs field not found in config file")
 
-        logger.debug(f"Found {len(config['inputs'])} input datasets in configuration")
+        logger.debug(
+            f"Found {len(self.original_config['inputs'])}"
+            " input datasets in configuration"
+        )
 
         # Get global basePath if provided
-        global_base_path = config.get("basePath", "")
+        global_base_path = self.original_config.get("basePath", "")
         if global_base_path:
             logger.debug(f"Global basePath specified: {global_base_path}")
         else:
@@ -71,7 +75,9 @@ class Config:
         # Log the current working directory
         logger.debug(f"Current working directory: {os.getcwd()}")
 
-        self.datasets = self._load_datasets(config["inputs"], global_base_path)
+        self.datasets = self._load_datasets(
+            self.original_config["inputs"], global_base_path
+        )
 
         logger.info(f"Config loaded successfully: {len(self.datasets)} datasets found.")
         logger.debug(self)
@@ -232,14 +238,8 @@ class Config:
 
         return datasets
 
-    def to_dict(
-        self, include_signal_data: bool = False, include_total_signal_data: bool = True
-    ) -> Dict:
+    def to_dict(self) -> Dict:
         """Convert the Config to a dictionary.
-
-        Args:
-            include_signal_data: Whether to include signal data.
-            include_total_signal_data: Whether to include total signal data.
 
         Returns:
             Dictionary representation of the Config.
@@ -251,10 +251,58 @@ class Config:
         # Otherwise, convert datasets to dictionary
         return {
             "datasets": [
-                dataset.to_dict(include_signal_data, include_total_signal_data)
+                dataset.to_dict()
                 for dataset in sorted(self.datasets, key=lambda x: x.date)
             ]
         }
+
+    def get_integrated_charge_data(self) -> Dict[str, Dict[str, Dict[str, float]]]:
+        """Get the integrated charge data for all datasets.
+
+        Returns:
+            Dictionary mapping dataset dates to their integrated charge data.
+        """
+        charge_data = {}
+        for dataset in self.datasets:
+            dataset_charge_data = dataset.get_integrated_charge_data()
+            if dataset_charge_data:  # Only include datasets with charge data
+                charge_data[dataset.date] = dataset_charge_data
+        return charge_data
+
+    def save(self) -> None:
+        """Save the current configuration back to the original config file.
+
+        This method updates the integrated charge data in the original config structure
+        and saves it back to the file specified in config_path.
+        """
+        if not hasattr(self, "original_config"):
+            raise ValueError("No original config data available for saving")
+
+        if not self.config_path:
+            raise ValueError("No config path specified for saving")
+
+        # Create a copy of the original config to modify
+        updated_config = dict(self.original_config)
+
+        # Get all integrated charge data using the dedicated method
+        all_charge_data = self.get_integrated_charge_data()
+
+        # Update integrated charge data for each dataset
+        for i, input_data in enumerate(updated_config["inputs"]):
+            date = input_data.get("date")
+            if date and date in all_charge_data:
+                # Update the input data with integrated charge data
+                updated_config["inputs"][i]["integratedCharge"] = all_charge_data[date]
+
+        # Save the updated config back to the file
+        logger.info(f"Saving updated configuration to {self.config_path}")
+        with open(self.config_path, "w") as file:
+            json.dump(updated_config, file, indent=4)
+
+        # Update the stored original config
+        self.original_config = updated_config
+
+        logger.info("Configuration saved successfully")
 
     def __str__(self):
         """Return string representation of the Config."""

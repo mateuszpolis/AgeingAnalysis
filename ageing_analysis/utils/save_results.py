@@ -35,17 +35,13 @@ def save_results(
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
         # Convert config to dictionary
-        results_data = config.to_dict(
-            include_signal_data=False,
-            include_total_signal_data=include_total_signal_data,
-        )
+        results_data = config.to_dict()
 
         # Add metadata
         results_data["metadata"] = {
             "generated_at": datetime.now().isoformat(),
             "version": "1.0.0",
             "analysis_type": "ageing_analysis",
-            "include_total_signal_data": include_total_signal_data,
         }
 
         # Save to JSON file

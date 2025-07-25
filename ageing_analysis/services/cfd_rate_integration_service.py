@@ -334,6 +334,7 @@ class CFDRateIntegrationService:
         chunk_size_days: int = 1,
         filename: str | None = None,
         multiply_by_mu: bool = False,
+        include_pmc9: bool = True,
     ) -> Dict[str, Dict[str, float]]:
         """Get integrated CFD rate data for the specified date range.
 
@@ -401,6 +402,7 @@ class CFDRateIntegrationService:
         return self._sum_integrated_cfd_rate(
             self._query_integrated_cfd_rate(start_date, end_date, filename=filename),
             multiply_by_mu,
+            include_pmc9,
         )
 
     def _get_pm_and_channel_from_element_name(
@@ -419,7 +421,10 @@ class CFDRateIntegrationService:
         return pm, channel
 
     def _sum_integrated_cfd_rate(
-        self, integrated_data: pd.DataFrame, multiply_by_mu: bool = False
+        self,
+        integrated_data: pd.DataFrame,
+        multiply_by_mu: bool = False,
+        include_pmc9: bool = True,
     ) -> Dict[str, Dict[str, float]]:
         """Sum the integrated CFD rate by PM and Channel.
 
@@ -428,6 +433,7 @@ class CFDRateIntegrationService:
             ["timestamp", "value", "element_name"]
             multiply_by_mu: If True, multiply the integrated CFD rate by the mu
                 value.
+            include_pmc9: If True, include PMC9 channels 9, 10, 11, 12 in the result.
 
         Returns:
             Dictionary with PM as keys and dictionaries with Channels as keys
@@ -459,6 +465,11 @@ class CFDRateIntegrationService:
         for _, row in grouped.iterrows():
             pm, channel, value = row["pm"], row["channel"], row["value"]
             result.setdefault(pm, {})[channel] = value
+
+        # For PMC9 channels 9, 10, 11, 12, set the value to 0
+        if include_pmc9:
+            for channel in ["Ch09", "Ch10", "Ch11", "Ch12"]:
+                result["PMC9"][channel] = 0.0
 
         return result
 
@@ -579,6 +590,33 @@ class CFDRateIntegrationService:
                 f"Error downloading/integrating chunk {start_date} to {end_date}: {e}"
             )
             return pd.DataFrame(columns=["timestamp", "value", "element_name"])
+
+    def get_empty_pm_channel_dict(
+        self, include_pmc9: bool = False
+    ) -> Dict[str, Dict[str, float]]:
+        """Get an empty dictionary with PM and Channel as keys.
+
+        Returns:
+            Dictionary with PM and Channel as keys.
+        """
+        datapoints = list(self._get_datapoints())
+        pms_channels = [
+            self._get_pm_and_channel_from_element_name(dp) for dp in datapoints
+        ]
+
+        # Create the nested dictionary structure
+        result: Dict[str, Dict[str, float]] = {}
+
+        for pm, channel in pms_channels:
+            if pm not in result:
+                result[pm] = {}
+            result[pm][channel] = 0.0
+
+        if include_pmc9:
+            for channel in ["Ch09", "Ch10", "Ch11", "Ch12"]:
+                result["PMC9"][channel] = 0.0
+
+        return result
 
     def _ensure_all_elements_have_records(
         self,
