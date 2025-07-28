@@ -929,6 +929,7 @@ invalid_date;00:00:02;test_element2;67.89
             timestamps = result["timestamp"].tolist()
             assert timestamps == sorted(timestamps)
 
+    @pytest.mark.local_only
     def test_get_data_without_aliases(self):
         """Test get_data method without aliases."""
         # Arrange
