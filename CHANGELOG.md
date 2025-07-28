@@ -1,3 +1,26 @@
+# [1.12.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.11.0...v1.12.0) (2025-07-28)
+
+
+### Bug Fixes
+
+* **time_series_tab:** improve integrated charge display and tooltip formatting ([15cfa14](https://github.com/mateuszpolis/AgeingAnalysis/commit/15cfa14a468d16e0397c02b46d046f6f26d28dfa))
+
+
+### Features
+
+* **ageing_analysis:** add integrated charge functionality to AgeingAnalysisApp ([ed556e0](https://github.com/mateuszpolis/AgeingAnalysis/commit/ed556e06e50e7da6c782d82dbd1bd576b377e775))
+* **ageing_analysis:** add integrated charge progress window and update calculation process ([071e93a](https://github.com/mateuszpolis/AgeingAnalysis/commit/071e93adb587da07f2c1c7b80fa1bc5955627565))
+* **ageing_analysis:** enhance GUI with logo support and window icon management ([3cfcf53](https://github.com/mateuszpolis/AgeingAnalysis/commit/3cfcf536630eee17ccb98b7f86be5cb452826230))
+* **ageing_analysis:** implement integrated charge calculation and configuration saving ([12bf28d](https://github.com/mateuszpolis/AgeingAnalysis/commit/12bf28d2ba1cfa4608479f6d5eff1e8c5d124cfa))
+* **cfd_rate_integration_service:** add CFDRateIntegrationService for CFD rate integration ([400a8dc](https://github.com/mateuszpolis/AgeingAnalysis/commit/400a8dc1392102ddbedaf6613f3d9298a9a5cdb2))
+* **cfd_rate_integration_service:** add multiply_by_mu parameter for CFD rate calculations ([0d8dfe5](https://github.com/mateuszpolis/AgeingAnalysis/commit/0d8dfe55ef928780629545eefbf755178c86026a))
+* **cfd_rate_integration_service:** enhance CFDRateIntegrationService with logging and coverage improvements ([86d3894](https://github.com/mateuszpolis/AgeingAnalysis/commit/86d38942c0bc888e779ac0f4de2c33b8c5f194f8))
+* **cfd_rate_integration_service:** enhance date handling and add unit tests ([95eddf0](https://github.com/mateuszpolis/AgeingAnalysis/commit/95eddf0e8acbf0674143576ccd663e574a057783))
+* **da_batch_client:** add DA_batch_client integration for file upload and result retrieval ([e81f4e8](https://github.com/mateuszpolis/AgeingAnalysis/commit/e81f4e84c5cb1633538054161ef48f1abd7d533e))
+* **darma_api_service:** enhance DA_batch_client integration with error handling ([40dafeb](https://github.com/mateuszpolis/AgeingAnalysis/commit/40dafebaf1ec73cc29eebc07a28f22bae03e43fe))
+* **darma_api_service:** implement DA_batch_client integration for data retrieval ([46d3d74](https://github.com/mateuszpolis/AgeingAnalysis/commit/46d3d74ccd54abb1250681b1081686e75817a885))
+* **dependencies:** add pyarrow and requests for parquet support and DA_batch_client ([9bc5302](https://github.com/mateuszpolis/AgeingAnalysis/commit/9bc53021523400cd3781dc5cf0986f7020060ed0))
+
 # [1.11.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.10.0...v1.11.0) (2025-07-22)
 
 
