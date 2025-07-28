@@ -6,6 +6,7 @@ import tempfile
 import uuid
 from enum import Enum
 from pathlib import Path
+from typing import List, Optional
 
 import pandas as pd
 
@@ -79,8 +80,8 @@ class DarmaApiService:
         time_from: datetime.datetime,
         time_to: datetime.datetime,
         schema: DarmaApiSchema,
-        elements: list[str],
-        aliases: list[str] = None,
+        elements: List[str],
+        aliases: Optional[List[str]] = None,
     ) -> pd.DataFrame:
         """Get data from the DARMA API.
 
@@ -112,7 +113,7 @@ class DarmaApiService:
         # Parse and merge all response files into a single DataFrame
         return self._parse_multiple_responses(output_files)
 
-    def _call_da_batch_client(self, input_file: Path, output_base: Path) -> list[Path]:
+    def _call_da_batch_client(self, input_file: Path, output_base: Path) -> List[Path]:
         """Call the DA_batch_client to retrieve data from the DARMA API.
 
         Args:
@@ -211,7 +212,7 @@ class DarmaApiService:
 
         return result
 
-    def _parse_multiple_responses(self, output_files: list[Path]) -> pd.DataFrame:
+    def _parse_multiple_responses(self, output_files: List[Path]) -> pd.DataFrame:
         """Parse multiple response CSV files from the DARMA API and merge them.
 
         Args:
@@ -245,8 +246,8 @@ class DarmaApiService:
         time_from: datetime.datetime,
         time_to: datetime.datetime,
         schema: DarmaApiSchema,
-        elements: list[str],
-        aliases: list[str] = None,
+        elements: List[str],
+        aliases: Optional[List[str]] = None,
     ) -> Path:
         """Create a CSV input file for the DARMA API.
 

@@ -3,7 +3,7 @@
 import datetime
 import logging
 import os
-from typing import Dict, Generator, List, Tuple
+from typing import Dict, Generator, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -25,7 +25,7 @@ class CFDRateIntegrationService:
         self.darma_api_service = DarmaApiService()
 
     def _save_integrated_cfd_rate(
-        self, integrated_cfd_rate: pd.DataFrame, filename: str | None = None
+        self, integrated_cfd_rate: pd.DataFrame, filename: Optional[str] = None
     ) -> None:
         """Save the integrated CFD rate to a parquet file with incremental updates.
 
@@ -82,7 +82,7 @@ class CFDRateIntegrationService:
         # Save to parquet file
         df_combined.to_parquet(filename, index=False)
 
-    def _get_available_data_coverage(self, filename: str | None = None) -> dict:
+    def _get_available_data_coverage(self, filename: Optional[str] = None) -> dict:
         """Get information about available data coverage in the parquet file.
 
         Args:
@@ -116,8 +116,8 @@ class CFDRateIntegrationService:
         self,
         start_date: datetime.date,
         end_date: datetime.date,
-        element_names: list | None = None,
-        filename: str | None = None,
+        element_names: Optional[List[str]] = None,
+        filename: Optional[str] = None,
     ) -> Dict[Tuple[datetime.date, datetime.date], List[str]]:
         """Determine what date ranges are missing for each element.
 
@@ -198,8 +198,8 @@ class CFDRateIntegrationService:
         self,
         start_date: datetime.date,
         end_date: datetime.date,
-        element_names: list | None = None,
-        filename: str | None = None,
+        element_names: Optional[List[str]] = None,
+        filename: Optional[str] = None,
     ) -> pd.DataFrame:
         """Query integrated CFD rate from the parquet file for a specific date range.
 
@@ -356,7 +356,7 @@ class CFDRateIntegrationService:
         start_date: datetime.date,
         end_date: datetime.date,
         chunk_size_days: int = 1,
-        filename: str | None = None,
+        filename: Optional[str] = None,
         multiply_by_mu: bool = False,
         include_pmc9: bool = True,
     ) -> Dict[str, Dict[str, float]]:
@@ -512,7 +512,7 @@ class CFDRateIntegrationService:
         self,
         start_date: datetime.date,
         end_date: datetime.date,
-        element_names: list[str],
+        element_names: List[str],
         chunk_size_days: int,
     ) -> pd.DataFrame:
         """Process a date range in daily chunks, downloading and integrating data.
@@ -570,7 +570,7 @@ class CFDRateIntegrationService:
         self,
         start_date: datetime.date,
         end_date: datetime.date,
-        element_names: list[str],
+        element_names: List[str],
     ) -> pd.DataFrame:
         """Download and integrate data for a specific chunk.
 
@@ -662,7 +662,7 @@ class CFDRateIntegrationService:
     def _ensure_all_elements_have_records(
         self,
         integrated_data: pd.DataFrame,
-        requested_elements: list[str],
+        requested_elements: List[str],
         end_date: datetime.date,
     ) -> pd.DataFrame:
         """Ensure all requested elements have a record at end_date 12:00.

@@ -17,7 +17,7 @@ def upload_file(file_path, flask_url):
         flask_url (str): URL of the Flask app's upload endpoint.
 
     Returns:
-        list[str]: A list of client IDs if successful, otherwise None.
+        List[str]: A list of client IDs if successful, otherwise None.
     """
     try:
         # Read and encode the file in Base64
@@ -146,7 +146,7 @@ def request_and_save_parsed_data(client_ids, parsed_data_url, output_path):
     """Request data from the server for the given client IDs and save it to a file.
 
     Args:
-        client_ids (list[str]): A list of client IDs for which parsed data is requested.
+        client_ids (List[str]): A list of client IDs for which parsed data is requested.
         parsed_data_url (str): URL of the Flask app's parsed data endpoint.
         output_path (str): Path to save the output parsed data file.
     """
