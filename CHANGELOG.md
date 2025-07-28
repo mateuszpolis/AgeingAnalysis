@@ -1,3 +1,10 @@
+## [1.12.1](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.12.0...v1.12.1) (2025-07-28)
+
+
+### Bug Fixes
+
+* resolve merge conflicts and update type hints for Python 3.8 compatibility ([aaf86b3](https://github.com/mateuszpolis/AgeingAnalysis/commit/aaf86b32a220a8523d4576f13a47ab26a62fa888))
+
 # [1.11.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.10.0...v1.11.0) (2025-07-22)
 
 
