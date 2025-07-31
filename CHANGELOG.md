@@ -1,3 +1,10 @@
+# [1.13.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.12.1...v1.13.0) (2025-07-31)
+
+
+### Features
+
+* **range_configuration:** add RangeConfigurationService and RangeCorrectionConfigurationParser for handling range correction data ([9589eab](https://github.com/mateuszpolis/AgeingAnalysis/commit/9589eab14f20029fb890dd86e7fa65433a9ed729))
+
 ## [1.12.1](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.12.0...v1.12.1) (2025-07-28)
 
 
