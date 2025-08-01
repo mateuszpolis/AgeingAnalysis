@@ -18,6 +18,8 @@ from typing import Dict, List, Tuple
 
 import pandas as pd
 
+from ageing_analysis.utils.file_utils import safe_extract_tar, safe_extract_zip
+
 
 class RangeCorrectionConfigurationError(Exception):
     """Base exception for range correction configuration errors."""
@@ -163,12 +165,12 @@ class RangeCorrectionConfigurationParser:
             try:
                 if _is_zip(p):
                     with zipfile.ZipFile(p) as zf:
-                        self._safe_extract_zip(zf, dest)
+                        safe_extract_zip(zf, dest)
                     return dest
                 if _is_tar(p):
                     # Allow any compression handled by tarfile
                     with tarfile.open(p) as tf:
-                        self._safe_extract_tar(tf, dest)
+                        safe_extract_tar(tf, dest)
                     return dest
                 return None
             except Exception as e:
@@ -262,32 +264,6 @@ class RangeCorrectionConfigurationParser:
 
         # Function completes without raising, per requirements.
         return None
-
-    def _safe_extract_zip(self, zf: zipfile.ZipFile, dest: Path):
-        """Extract a zip file safely.
-
-        Args:
-          zf: The zip file to extract.
-          dest: The destination directory to extract the zip file to.
-        """
-        for member in zf.namelist():
-            member_path = dest / member
-            if not member_path.resolve().is_relative_to(dest.resolve()):
-                raise Exception(f"Unsafe path detected in zip: {member}")
-            zf.extract(member, dest)
-
-    def _safe_extract_tar(self, tf: tarfile.TarFile, dest: Path):
-        """Extract a tar file safely.
-
-        Args:
-          tf: The tar file to extract.
-          dest: The destination directory to extract the tar file to.
-        """
-        for member in tf.getmembers():
-            member_path = dest / member.name
-            if not member_path.resolve().is_relative_to(dest.resolve()):
-                raise Exception(f"Unsafe path detected in tar: {member.name}")
-            tf.extract(member, dest)
 
     def _save_range_corrections_from_config_file(self, file_path: str) -> None:
         """Save the range corrections from a configuration file to a parquet file.
