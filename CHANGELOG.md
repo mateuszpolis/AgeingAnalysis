@@ -1,3 +1,10 @@
+# [1.14.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.13.0...v1.14.0) (2025-08-01)
+
+
+### Features
+
+* **control_server_logs:** implement ControlServerLogsService for parsing and saving configuration loads ([b8c35be](https://github.com/mateuszpolis/AgeingAnalysis/commit/b8c35beaa1eebbffa66a02afcf37ffc0eb28e881))
+
 # [1.13.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.12.1...v1.13.0) (2025-07-31)
 
 
