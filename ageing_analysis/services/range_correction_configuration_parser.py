@@ -268,6 +268,12 @@ class RangeCorrectionConfigurationParser:
     def _save_range_corrections_from_config_file(self, file_path: str) -> None:
         """Save the range corrections from a configuration file to a parquet file.
 
+        The dataframe format is:
+        - detector_name: The name of the detector.
+        - configuration: The name of the configuration.
+        - pm: The name of the PM.
+        - channel: The number of the channel.
+        - channel_name: The name of the channel.
         Args:
           file_path: The path to the file containing the range corrections.
 
@@ -377,7 +383,7 @@ class RangeCorrectionConfigurationParser:
             PMs or channels).
         """
         # Setup and light pre-processing
-        valid_pm_names = set(self._get_all_pm_names())
+        valid_pm_names = set(self._get_all_pm_names(include_channel_switching=False))
         pm_mapping = self._get_pm_mapping()
         config_name = os.path.splitext(os.path.basename(file_path))[0]
 

@@ -3,12 +3,14 @@
 import datetime
 import logging
 import os
-from typing import Dict, Generator, List, Optional, Tuple
+from pathlib import Path
+from typing import Dict, Generator, List, Optional, Set, Tuple
 
 import numpy as np
 import pandas as pd
 
 from ageing_analysis.services.darma_api_service import DarmaApiSchema, DarmaApiService
+from ageing_analysis.services.range_correction_service import RangeCorrectionService
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +25,12 @@ class CFDRateIntegrationService:
             dataset: The dataset to use.
         """
         self.darma_api_service = DarmaApiService()
+        self.range_correction_service = RangeCorrectionService()
 
     def _save_integrated_cfd_rate(
-        self, integrated_cfd_rate: pd.DataFrame, filename: Optional[str] = None
+        self,
+        integrated_cfd_rate: pd.DataFrame,
+        filename: Optional[str] = "storage/cfd_rate/integrated_cfd_rate.parquet",
     ) -> None:
         """Save the integrated CFD rate to a parquet file with incremental updates.
 
@@ -37,31 +42,13 @@ class CFDRateIntegrationService:
             filename: Optional filename for the parquet file. If None, uses default
                 based on dataset.
         """
-        if filename is None:
-            filename = "integrated_cfd_rate.parquet"
-
-        # Convert timestamp to date for easier querying
+        # Use the integrated data directly without converting timestamps to dates
         df_new = integrated_cfd_rate.copy()
-        df_new["date"] = pd.to_datetime(df_new["timestamp"]).dt.date
-        df_new = df_new[["date", "element_name", "value"]]
 
         # Load existing data if file exists
         if os.path.exists(filename):
             try:
                 df_existing = pd.read_parquet(filename)
-                # Ensure date column is datetime.date type
-                df_existing["date"] = pd.to_datetime(df_existing["date"]).dt.date
-
-                # Ensure consistent date types before concatenation
-                if not df_existing.empty and not df_new.empty:
-                    # Ensure both DataFrames have date objects
-                    df_existing["date"] = df_existing["date"].apply(
-                        lambda x: x.date() if hasattr(x, "date") else x
-                    )
-                    df_new["date"] = df_new["date"].apply(
-                        lambda x: x.date() if hasattr(x, "date") else x
-                    )
-
                 # Combine existing and new data
                 df_combined = pd.concat([df_existing, df_new], ignore_index=True)
             except Exception as e:
@@ -70,19 +57,26 @@ class CFDRateIntegrationService:
         else:
             df_combined = df_new
 
-        # Remove duplicates, keeping the latest value for each date-element combination
+        # Remove duplicates, keeping the latest value
+        # for each timestamp-element combination
         df_combined.drop_duplicates(
-            subset=["date", "element_name"], keep="last", inplace=True
+            subset=["timestamp", "element_name"], keep="last", inplace=True
         )
 
-        # Sort by date and element_name for better querying performance
-        df_combined.sort_values(["date", "element_name"], inplace=True)
+        # Sort by timestamp and element_name for better querying performance
+        df_combined.sort_values(["timestamp", "element_name"], inplace=True)
         df_combined.reset_index(drop=True, inplace=True)
+
+        # Ensure the directory exists before saving
+        output_dir = Path(filename).parent
+        output_dir.mkdir(parents=True, exist_ok=True)
 
         # Save to parquet file
         df_combined.to_parquet(filename, index=False)
 
-    def _get_available_data_coverage(self, filename: Optional[str] = None) -> dict:
+    def _get_available_data_coverage(
+        self, filename: Optional[str] = "storage/cfd_rate/integrated_cfd_rate.parquet"
+    ) -> dict:
         """Get information about available data coverage in the parquet file.
 
         Args:
@@ -92,15 +86,13 @@ class CFDRateIntegrationService:
         Returns:
             Dictionary mapping element names to sets of available dates.
         """
-        if filename is None:
-            filename = "integrated_cfd_rate.parquet"
-
         if not os.path.exists(filename):
             return {}
 
         try:
             df = pd.read_parquet(filename)
-            df["date"] = pd.to_datetime(df["date"]).dt.date
+            # Convert timestamps to dates for coverage analysis
+            df["date"] = pd.to_datetime(df["timestamp"]).dt.date
 
             coverage = {}
             for element_name in df["element_name"].unique():
@@ -117,7 +109,7 @@ class CFDRateIntegrationService:
         start_date: datetime.date,
         end_date: datetime.date,
         element_names: Optional[List[str]] = None,
-        filename: Optional[str] = None,
+        filename: Optional[str] = "storage/cfd_rate/integrated_cfd_rate.parquet",
     ) -> Dict[Tuple[datetime.date, datetime.date], List[str]]:
         """Determine what date ranges are missing for each element.
 
@@ -131,9 +123,6 @@ class CFDRateIntegrationService:
         Returns:
             Dictionary mapping (start_date, end_date) tuples to list of element names.
         """
-        if filename is None:
-            filename = "integrated_cfd_rate.parquet"
-
         if element_names is None:
             element_names = list(self._get_datapoints())
 
@@ -143,7 +132,7 @@ class CFDRateIntegrationService:
         missing_ranges = {}
 
         # Required record timestamps: start_date+1 to end_date
-        required_records = [
+        required_records: List[datetime.date] = [
             (start_date + datetime.timedelta(days=i))
             for i in range(1, (end_date - start_date).days + 1)
         ]
@@ -157,12 +146,17 @@ class CFDRateIntegrationService:
                 continue
 
             # Ensure consistent date types for comparison
-            available_records_normalized = {
+            available_records_normalized: Set[datetime.date] = {
                 d.date() if hasattr(d, "date") else d for d in available_records
             }
-            missing_records = sorted(
+
+            missing_records: List[datetime.date] = sorted(
                 d for d in required_records if d not in available_records_normalized
             )
+
+            print("Required records: ", required_records)
+            print("Available records: ", available_records_normalized)
+            print("Missing records: ", missing_records)
 
             # Group missing_records into contiguous ranges
             ranges = []
@@ -199,7 +193,7 @@ class CFDRateIntegrationService:
         start_date: datetime.date,
         end_date: datetime.date,
         element_names: Optional[List[str]] = None,
-        filename: Optional[str] = None,
+        filename: Optional[str] = "storage/cfd_rate/integrated_cfd_rate.parquet",
     ) -> pd.DataFrame:
         """Query integrated CFD rate from the parquet file for a specific date range.
 
@@ -217,37 +211,30 @@ class CFDRateIntegrationService:
                 based on dataset.
 
         Returns:
-            DataFrame with columns ["date", "element_name", "value"] for the
+            DataFrame with columns ["timestamp", "element_name", "value"] for the
                 requested range.
         """
-        if filename is None:
-            filename = "integrated_cfd_rate.parquet"
-
         if not os.path.exists(filename):
-            return pd.DataFrame(columns=["date", "element_name", "value"])
+            return pd.DataFrame(columns=["timestamp", "element_name", "value"])
 
         try:
             df = pd.read_parquet(filename)
-            # Ensure date column is properly converted to date objects
-            df["date"] = pd.to_datetime(df["date"]).dt.date
 
+            # Convert start_date and end_date to datetime for timestamp comparison
             # For a range start_date to end_date, we want integrations that end on dates
             # from start_date+1 to end_date (since integration periods are
             # start_date 12pm to end_date 12pm)
-            query_start = start_date + datetime.timedelta(days=1)
-            query_end = end_date
-
-            # Ensure both sides of comparison are date objects
-            df["date"] = df["date"].apply(
-                lambda x: x.date() if hasattr(x, "date") else x
+            query_start_datetime = datetime.datetime.combine(
+                start_date + datetime.timedelta(days=1), datetime.time(0, 0, 0)
             )
-            query_start = (
-                query_start.date() if hasattr(query_start, "date") else query_start
+            query_end_datetime = datetime.datetime.combine(
+                end_date, datetime.time(23, 59, 59, 999999)
             )
-            query_end = query_end.date() if hasattr(query_end, "date") else query_end
 
-            # Filter by date range
-            mask = (df["date"] >= query_start) & (df["date"] <= query_end)
+            # Filter by timestamp range
+            mask = (df["timestamp"] >= query_start_datetime) & (
+                df["timestamp"] <= query_end_datetime
+            )
             df_filtered = df[mask]
 
             # Filter by element names if specified
@@ -260,7 +247,7 @@ class CFDRateIntegrationService:
 
         except Exception as e:
             logger.error(f"Error querying data from {filename}: {e}")
-            return pd.DataFrame(columns=["date", "element_name", "value"])
+            return pd.DataFrame(columns=["timestamp", "element_name", "value"])
 
     def _get_datapoints(self) -> Generator[str, None, None]:
         """Get the datapoints for the CFD rate.
@@ -270,7 +257,7 @@ class CFDRateIntegrationService:
         """
         for pm_type in ["A", "C"]:
             for pm in range(0, 10):
-                if pm_type == "A" and pm == 9:
+                if pm_type == "A" and pm == 8:
                     break
                 for ch in range(1, 13):
                     if pm_type == "C" and pm == 9 and ch == 9:
@@ -305,48 +292,38 @@ class CFDRateIntegrationService:
 
         return integrated_value
 
-    def _integrate_cfd_rate(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Integrate the CFD rate by element and day.
+    def _integrate_cfd_rate(
+        self, df: pd.DataFrame, end_datetime: datetime.datetime
+    ) -> pd.DataFrame:
+        """Integrate the CFD rate by element across the entire time range.
 
         Args:
             df: DataFrame with columns ["timestamp", "value", "element_name"]
+            end_datetime: The end datetime to use as the timestamp for the integrated
+                result
 
         Returns:
-            DataFrame with integrated values per element per 12pm–12pm day.
+            DataFrame with integrated values per element with end_datetime as timestamp:
+            [timestamp, value, element_name]
         """
         if df.empty:
             return pd.DataFrame(columns=["timestamp", "value", "element_name"])
 
-        # Compute integration day anchored at 12:00
-        # Data from 12pm on day N to 12pm on day N+1 gets assigned to day N+1
         df = df.copy()
 
-        # Shift timestamps by 12 hours so that 12pm becomes 00:00
-        # This makes it easier to group into 24-hour periods
-        shifted_timestamps = df["timestamp"] - pd.Timedelta(hours=12)
-
-        # Group by day (floor to day boundary)
-        df["integration_day"] = (
-            shifted_timestamps.dt.floor("D")
-            + pd.Timedelta(hours=12)
-            + pd.Timedelta(days=1)
-        )
-
-        # Group and integrate
+        # Group by element and integrate across entire time range
         def integrate_group(group):
             integrated_value = self._integrate_cfd_rate_trapezoidal(group)
             return pd.Series(
                 {
-                    "timestamp": group["integration_day"].iloc[0],
+                    "timestamp": end_datetime,
                     "value": integrated_value,
                     "element_name": group["element_name"].iloc[0],
                 }
             )
 
         result = (
-            df.groupby(["element_name", "integration_day"])
-            .apply(integrate_group)
-            .reset_index(drop=True)
+            df.groupby("element_name").apply(integrate_group).reset_index(drop=True)
         )
 
         return result
@@ -356,7 +333,7 @@ class CFDRateIntegrationService:
         start_date: datetime.date,
         end_date: datetime.date,
         chunk_size_days: int = 1,
-        filename: Optional[str] = None,
+        filename: Optional[str] = "storage/cfd_rate/integrated_cfd_rate.parquet",
         multiply_by_mu: bool = False,
         include_pmc9: bool = True,
     ) -> Dict[str, Dict[str, float]]:
@@ -375,9 +352,6 @@ class CFDRateIntegrationService:
             Dictionary with PM as keys and dictionaries with Channels as keys
             and values as integrated CFD rates for the requested range.
         """
-        if filename is None:
-            filename = "integrated_cfd_rate.parquet"
-
         # Get all datapoints that need to be processed
         all_datapoints = list(self._get_datapoints())
         logger.info(
@@ -389,8 +363,6 @@ class CFDRateIntegrationService:
         missing_ranges = self._get_missing_date_ranges(
             start_date, end_date, all_datapoints, filename
         )
-
-        print("Missing ranges: ", missing_ranges)
 
         if missing_ranges:
             # Process missing ranges in chunks
@@ -529,10 +501,9 @@ class CFDRateIntegrationService:
         logger.info(f"Processing date range in chunks: {start_date} to {end_date}")
         logger.info(f"Chunk size: {chunk_size_days} days")
 
-        print("Start date: ", start_date)
-        print("End date: ", end_date)
-
-        all_integrated_data = []
+        all_integrated_data: pd.DataFrame = pd.DataFrame(
+            columns=["timestamp", "value", "element_name"]
+        )
         # First record we need is for start_date+1
         current_record_date = start_date
 
@@ -542,34 +513,58 @@ class CFDRateIntegrationService:
                 current_record_date + datetime.timedelta(days=chunk_size_days), end_date
             )
 
-            print("Current record date: ", current_record_date)
-            print("Chunk record end date: ", chunk_record_end_date)
-
             logger.info(
                 f"Processing chunk of records: {current_record_date} to "
                 f"{chunk_record_end_date}"
             )
 
-            # Download and integrate for this chunk
-            chunk_data = self._download_and_integrate_chunk(
-                current_record_date, chunk_record_end_date, element_names
+            chunk_start_datetime = datetime.datetime.combine(
+                current_record_date, datetime.time(12, 0, 0)
+            )
+            chunk_end_datetime = datetime.datetime.combine(
+                chunk_record_end_date, datetime.time(11, 59, 59, 999999)
             )
 
-            if not chunk_data.empty:
-                all_integrated_data.append(chunk_data)
+            # Get additional required integration timestamps for this day chunk
+            required_integration_timestamps = (
+                self.range_correction_service.get_required_integration_timestamps(
+                    chunk_start_datetime, chunk_end_datetime
+                )
+            )
+
+            # Add the end start and end datetime to the required integration timestamps
+            required_integration_timestamps.append(chunk_start_datetime)
+            required_integration_timestamps.append(chunk_end_datetime)
+
+            required_integration_timestamps = sorted(
+                list(set(required_integration_timestamps))
+            )
+
+            for i in range(1, len(required_integration_timestamps)):
+                integration_start_datetime = required_integration_timestamps[i - 1]
+                integration_end_datetime = required_integration_timestamps[i]
+
+                # Download and integrate for this chunk
+                chunk_data = self._download_and_integrate_chunk(
+                    integration_start_datetime, integration_end_datetime, element_names
+                )
+
+                if not chunk_data.empty:
+                    all_integrated_data = pd.concat(
+                        [all_integrated_data, chunk_data], ignore_index=True
+                    )
 
             # Move to next chunk of record dates
             current_record_date = chunk_record_end_date
 
-        if all_integrated_data:
-            return pd.concat(all_integrated_data, ignore_index=True)
-        else:
-            return pd.DataFrame(columns=["timestamp", "value", "element_name"])
+        print(all_integrated_data)
+
+        return all_integrated_data
 
     def _download_and_integrate_chunk(
         self,
-        start_date: datetime.date,
-        end_date: datetime.date,
+        start_datetime: datetime.datetime,
+        end_datetime: datetime.datetime,
         element_names: List[str],
     ) -> pd.DataFrame:
         """Download and integrate data for a specific chunk.
@@ -581,13 +576,8 @@ class CFDRateIntegrationService:
 
         Returns:
             DataFrame with integrated data for the chunk.
+            [timestamp, value, element_name]
         """
-        # Convert dates to datetime for DARMA API
-        start_datetime = datetime.datetime.combine(start_date, datetime.time(12, 0, 0))
-        end_datetime = datetime.datetime.combine(
-            end_date, datetime.time(11, 59, 59, 999999)
-        )
-
         logger.info(
             f"Downloading data from DARMA API for {len(element_names)} elements"
         )
@@ -603,15 +593,15 @@ class CFDRateIntegrationService:
 
             if raw_data.empty:
                 logger.warning(
-                    f"No data received from DARMA API for chunk {start_date} to "
-                    f"{end_date}"
+                    f"No data received from DARMA API for chunk {start_datetime} to "
+                    f"{end_datetime}"
                 )
             else:
                 logger.info(f"Downloaded {len(raw_data)} raw data points")
 
             if not raw_data.empty:
                 # Integrate the raw data
-                integrated_data = self._integrate_cfd_rate(raw_data)
+                integrated_data = self._integrate_cfd_rate(raw_data, end_datetime)
             else:
                 integrated_data = pd.DataFrame(
                     columns=["timestamp", "value", "element_name"]
@@ -621,14 +611,16 @@ class CFDRateIntegrationService:
 
             # Ensure all requested elements have records, even if no data was returned
             integrated_data = self._ensure_all_elements_have_records(
-                integrated_data, element_names, end_date
+                integrated_data, element_names, end_datetime
             )
 
             return integrated_data
 
         except Exception as e:
             logger.error(
-                f"Error downloading/integrating chunk {start_date} to {end_date}: {e}"
+                "Error downloading/integrating chunk "
+                f"{start_datetime} to {end_datetime} "
+                f"for {len(element_names)} elements: {e}"
             )
             return pd.DataFrame(columns=["timestamp", "value", "element_name"])
 
@@ -663,21 +655,22 @@ class CFDRateIntegrationService:
         self,
         integrated_data: pd.DataFrame,
         requested_elements: List[str],
-        end_date: datetime.date,
+        end_datetime: datetime.datetime,
     ) -> pd.DataFrame:
-        """Ensure all requested elements have a record at end_date 12:00.
+        """Ensure all requested elements have a record at end_datetime.
 
-        If an element has no data, create a record with 0 value for end_date 12:00.
+        If an element has no data, create a record with 0 value for end_datetime.
 
         Args:
             integrated_data: DataFrame with integrated data
             requested_elements: List of elements that were requested
-            end_date: End date of the chunk
+            end_datetime: End datetime of the chunk
 
         Returns:
-            DataFrame with all requested elements having records at end_date 12:00.
+            DataFrame with all requested elements having records at end_datetime.
+            [timestamp, value, element_name]
         """
-        target_timestamp = pd.Timestamp(end_date) + pd.Timedelta(hours=12)
+        target_timestamp = pd.Timestamp(end_datetime)
 
         # Find elements already present in integrated_data
         if integrated_data.empty:

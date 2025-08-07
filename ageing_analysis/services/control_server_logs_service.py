@@ -256,6 +256,10 @@ class ControlServerLogsService:
     def _save_configuration_loads_from_file(self, file_path: str) -> None:
         """Save the configuration loads from a file to a parquet file.
 
+        The dataframe format is:
+        - timestamp: The timestamp of the configuration load.
+        - configuration_name: The name of the configuration loaded.
+
         Args:
           file_path: The path to the file containing the control server logs.
 
@@ -310,6 +314,9 @@ class ControlServerLogsService:
         output_dir = Path(self.output_file_path).parent
         output_dir.mkdir(parents=True, exist_ok=True)
 
+        # Filter out consecutive duplicates of the same configuration
+        combined_df = self._filter_consecutive_configuration_duplicates(combined_df)
+
         # Save to parquet file
         combined_df.to_parquet(self.output_file_path, index=False)
 
@@ -356,3 +363,32 @@ class ControlServerLogsService:
                 "Configuration load pattern found but timestamp could not be parsed "
                 f"from line: {line}"
             ) from e
+
+    def _filter_consecutive_configuration_duplicates(
+        self, df: pd.DataFrame
+    ) -> pd.DataFrame:
+        """Filter out consecutive duplicates of the same configuration.
+
+        If there are multiple consecutive timestamps with the same configuration,
+        keep only the first occurrence.
+
+        Args:
+            df: DataFrame with columns ["timestamp", "configuration_name"]
+
+        Returns:
+            DataFrame with consecutive duplicates removed, keeping only the first
+            occurrence of each configuration in consecutive sequences.
+        """
+        if df.empty:
+            return df
+
+        # Sort by timestamp
+        df_sorted = df.sort_values("timestamp").reset_index(drop=True)
+
+        # Compare each row with the previous one to find where the configuration changes
+        config_changed = (
+            df_sorted["configuration_name"] != df_sorted["configuration_name"].shift()
+        )
+
+        # Keep only the rows where configuration changed
+        return df_sorted[config_changed].reset_index(drop=True)

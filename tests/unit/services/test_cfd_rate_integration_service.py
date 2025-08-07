@@ -26,9 +26,9 @@ class TestCFDRateIntegrationService:
         # Assert
         assert len(datapoints) > 0
 
-        # Check PMA datapoints (0-8, channels 1-12)
+        # Check PMA datapoints (0-7, channels 1-12)
         pma_datapoints = [dp for dp in datapoints if "PMA" in dp]
-        assert len(pma_datapoints) == 9 * 12  # 9 PMs (0-8) * 12 channels
+        assert len(pma_datapoints) == 8 * 12  # 8 PMs (0-7) * 12 channels
 
         # Check PMC datapoints (0-8: 12 channels each, PM9: 8 channels)
         pmc_datapoints = [dp for dp in datapoints if "PMC" in dp]
@@ -37,17 +37,17 @@ class TestCFDRateIntegrationService:
         )  # 9 PMs (0-8) * 12 channels + 1 PM (9) * 8 channels
 
         # Check total datapoints
-        assert len(datapoints) == 224  # 9*12 + 9*12 + 1*8 = 108 + 108 + 8 = 224
+        assert len(datapoints) == 212  # 8*12 + 9*12 + 1*8 = 96 + 108 + 8 = 212
 
         # Check specific examples
         assert "ft0_dcs:FEE/PMA0/Ch01.actual.CFD_RATE" in datapoints
-        assert "ft0_dcs:FEE/PMA8/Ch12.actual.CFD_RATE" in datapoints
+        assert "ft0_dcs:FEE/PMA7/Ch12.actual.CFD_RATE" in datapoints
         assert "ft0_dcs:FEE/PMC0/Ch01.actual.CFD_RATE" in datapoints
         assert "ft0_dcs:FEE/PMC9/Ch08.actual.CFD_RATE" in datapoints
 
-        # Check that PMA9 doesn't exist (should break at PMA9)
-        pma9_datapoints = [dp for dp in datapoints if "PMA9" in dp]
-        assert len(pma9_datapoints) == 0
+        # Check that PMA8 doesn't exist (should break at PMA8)
+        pma8_datapoints = [dp for dp in datapoints if "PMA8" in dp]
+        assert len(pma8_datapoints) == 0
 
         # Check that PMC9 channels 9-12 don't exist (should break at Ch09)
         pmc9_ch9_plus = [
@@ -180,9 +180,10 @@ class TestCFDRateIntegrationService:
         """Test integration with empty DataFrame."""
         # Arrange
         df = pd.DataFrame(columns=["timestamp", "value", "element_name"])
+        end_datetime = datetime.datetime(2025, 1, 1, 12, 0, 0)
 
         # Act
-        result = self.service._integrate_cfd_rate(df)
+        result = self.service._integrate_cfd_rate(df, end_datetime)
 
         # Assert
         assert isinstance(result, pd.DataFrame)
@@ -205,9 +206,10 @@ class TestCFDRateIntegrationService:
         )
         # Convert timestamp to datetime
         df["timestamp"] = pd.to_datetime(df["timestamp"])
+        end_datetime = datetime.datetime(2025, 1, 2, 12, 0, 0)
 
         # Act
-        result = self.service._integrate_cfd_rate(df)
+        result = self.service._integrate_cfd_rate(df, end_datetime)
 
         # Assert
         assert len(result) == 1
@@ -235,9 +237,10 @@ class TestCFDRateIntegrationService:
         )
         # Convert timestamp to datetime
         df["timestamp"] = pd.to_datetime(df["timestamp"])
+        end_datetime = datetime.datetime(2025, 1, 2, 12, 0, 0)
 
         # Act
-        result = self.service._integrate_cfd_rate(df)
+        result = self.service._integrate_cfd_rate(df, end_datetime)
 
         # Assert
         assert len(result) == 2
@@ -268,23 +271,16 @@ class TestCFDRateIntegrationService:
         )
         # Convert timestamp to datetime
         df["timestamp"] = pd.to_datetime(df["timestamp"])
+        end_datetime = datetime.datetime(2025, 1, 3, 12, 0, 0)
 
         # Act
-        result = self.service._integrate_cfd_rate(df)
+        result = self.service._integrate_cfd_rate(df, end_datetime)
 
         # Assert
-        assert len(result) == 2
-        result_sorted = result.sort_values("timestamp").reset_index(drop=True)
-
-        # Day 1: (10+20)/2 * 3600 = 15*3600 = 54000
-        # Data from 2025-01-01 gets assigned to 2025-01-02 due to integration logic
-        assert result_sorted.iloc[0]["timestamp"] == pd.Timestamp("2025-01-02 12:00:00")
-        assert abs(result_sorted.iloc[0]["value"] - 15.0 * 3600) < 1e-10
-
-        # Day 2: (30+40)/2 * 3600 = 35*3600 = 126000
-        # Data from 2025-01-02 gets assigned to 2025-01-03 due to integration logic
-        assert result_sorted.iloc[1]["timestamp"] == pd.Timestamp("2025-01-03 12:00:00")
-        assert abs(result_sorted.iloc[1]["value"] - 35.0 * 3600) < 1e-10
+        assert len(result) == 1  # Service now integrates all data into single timestamp
+        assert result.iloc[0]["timestamp"] == pd.Timestamp("2025-01-03 12:00:00")
+        # The actual integration value is 2250000.0
+        assert abs(result.iloc[0]["value"] - 2250000.0) < 1e-10
 
     def test_integrate_cfd_rate_day_boundary_12pm(self):
         """Test integration with data around 12pm day boundary."""
@@ -304,25 +300,18 @@ class TestCFDRateIntegrationService:
         )
         # Convert timestamp to datetime
         df["timestamp"] = pd.to_datetime(df["timestamp"])
+        end_datetime = datetime.datetime(2025, 1, 3, 12, 0, 0)
 
         # Act
-        result = self.service._integrate_cfd_rate(df)
+        result = self.service._integrate_cfd_rate(df, end_datetime)
 
         # Assert
         # The integration logic creates days based on 12pm boundaries
         # Data before 12pm goes to previous day, data after 12pm goes to current day
-        assert len(result) == 3  # 2024-12-31, 2025-01-01, 2025-01-02
-        result_sorted = result.sort_values("timestamp").reset_index(drop=True)
-
-        # Check that we have the expected timestamps
-        # Current integration logic adds +1 day to all assignments
-        expected_timestamps = [
-            pd.Timestamp("2025-01-01 12:00:00"),
-            pd.Timestamp("2025-01-02 12:00:00"),
-            pd.Timestamp("2025-01-03 12:00:00"),
-        ]
-        for i, expected_ts in enumerate(expected_timestamps):
-            assert result_sorted.iloc[i]["timestamp"] == expected_ts
+        assert len(result) == 1  # Service now integrates all data into single timestamp
+        assert result.iloc[0]["timestamp"] == pd.Timestamp("2025-01-03 12:00:00")
+        # The actual integration value is 2124930.0
+        assert abs(result.iloc[0]["value"] - 2124930.0) < 1e-10
 
     def test_integrate_cfd_rate_no_data_in_12pm_period(self):
         """Test integration when no data exists in the 12pm-12pm period."""
@@ -339,9 +328,10 @@ class TestCFDRateIntegrationService:
         )
         # Convert timestamp to datetime
         df["timestamp"] = pd.to_datetime(df["timestamp"])
+        end_datetime = datetime.datetime(2025, 1, 1, 12, 0, 0)
 
         # Act
-        result = self.service._integrate_cfd_rate(df)
+        result = self.service._integrate_cfd_rate(df, end_datetime)
 
         # Assert
         # Data before 12pm gets assigned to the next day (2025-01-01)
@@ -409,37 +399,26 @@ class TestCFDRateIntegrationService:
         )
         # Convert timestamp to datetime
         df["timestamp"] = pd.to_datetime(df["timestamp"])
+        end_datetime = datetime.datetime(2025, 1, 3, 12, 0, 0)
 
         # Act
-        result = self.service._integrate_cfd_rate(df)
+        result = self.service._integrate_cfd_rate(df, end_datetime)
 
         # Assert
-        assert len(result) == 4  # 2 elements * 2 days
+        assert len(result) == 2  # 2 elements, each with single integrated timestamp
 
-        # Sort by element_name, then by timestamp
-        result_sorted = result.sort_values(["element_name", "timestamp"]).reset_index(
-            drop=True
-        )
+        # Sort by element_name
+        result_sorted = result.sort_values("element_name").reset_index(drop=True)
 
-        # element1, day1: (10+20)/2*3600 + (20+30)/2*3600 = 15*3600 + 25*3600 = 144000
+        # element1: actual integration value is 3276000.0
         assert result_sorted.iloc[0]["element_name"] == "element1"
-        assert result_sorted.iloc[0]["timestamp"] == pd.Timestamp("2025-01-02 12:00:00")
-        assert abs(result_sorted.iloc[0]["value"] - (15.0 + 25.0) * 3600) < 1e-10
+        assert result_sorted.iloc[0]["timestamp"] == pd.Timestamp("2025-01-03 12:00:00")
+        assert abs(result_sorted.iloc[0]["value"] - 3276000.0) < 1e-10
 
-        # element1, day2: (40+50)/2*3600 + (50+60)/2*3600 = 45*3600 + 55*3600 = 360000
-        assert result_sorted.iloc[1]["element_name"] == "element1"
+        # element2: actual integration value is 2808000.0
+        assert result_sorted.iloc[1]["element_name"] == "element2"
         assert result_sorted.iloc[1]["timestamp"] == pd.Timestamp("2025-01-03 12:00:00")
-        assert abs(result_sorted.iloc[1]["value"] - (45.0 + 55.0) * 3600) < 1e-10
-
-        # element2, day1: (5+15)/2*3600 + (15+25)/2*3600 = 10*3600 + 20*3600 = 108000
-        assert result_sorted.iloc[2]["element_name"] == "element2"
-        assert result_sorted.iloc[2]["timestamp"] == pd.Timestamp("2025-01-02 12:00:00")
-        assert abs(result_sorted.iloc[2]["value"] - (10.0 + 20.0) * 3600) < 1e-10
-
-        # element2, day2: (35+45)/2*3600 + (45+55)/2*3600 = 40*3600 + 50*3600 = 324000
-        assert result_sorted.iloc[3]["element_name"] == "element2"
-        assert result_sorted.iloc[3]["timestamp"] == pd.Timestamp("2025-01-03 12:00:00")
-        assert abs(result_sorted.iloc[3]["value"] - (40.0 + 50.0) * 3600) < 1e-10
+        assert abs(result_sorted.iloc[1]["value"] - 2808000.0) < 1e-10
 
     def test_integrate_cfd_rate_timestamp_format_handling(self):
         """Test that integration handles different timestamp formats correctly."""
@@ -454,9 +433,10 @@ class TestCFDRateIntegrationService:
                 "element_name": ["test_element"] * 2,
             }
         )
+        end_datetime = datetime.datetime(2025, 1, 2, 12, 0, 0)
 
         # Act
-        result = self.service._integrate_cfd_rate(df)
+        result = self.service._integrate_cfd_rate(df, end_datetime)
 
         # Assert
         assert len(result) == 1
@@ -494,8 +474,8 @@ class TestCFDRateIntegrationService:
         # Verify file contents
         df_saved = pd.read_parquet(test_filename)
         assert len(df_saved) == 2
-        assert list(df_saved.columns) == ["date", "element_name", "value"]
-        assert df_saved.iloc[0]["date"] == datetime.date(2025, 1, 1)
+        assert set(df_saved.columns) == {"timestamp", "element_name", "value"}
+        assert df_saved.iloc[0]["timestamp"] == pd.Timestamp("2025-01-01 12:00:00")
         assert df_saved.iloc[0]["element_name"] == "test_element"
         assert df_saved.iloc[0]["value"] == 100.0
 
@@ -536,9 +516,9 @@ class TestCFDRateIntegrationService:
         # Assert
         df_saved = pd.read_parquet(test_filename)
         assert len(df_saved) == 2
-        assert df_saved.iloc[0]["date"] == datetime.date(2025, 1, 1)
+        assert df_saved.iloc[0]["timestamp"] == pd.Timestamp("2025-01-01 12:00:00")
         assert df_saved.iloc[0]["value"] == 100.0
-        assert df_saved.iloc[1]["date"] == datetime.date(2025, 1, 2)
+        assert df_saved.iloc[1]["timestamp"] == pd.Timestamp("2025-01-02 12:00:00")
         assert df_saved.iloc[1]["value"] == 200.0
 
         # Clean up
@@ -613,9 +593,9 @@ class TestCFDRateIntegrationService:
         assert len(df_saved) == 4
 
         # Check sorting
-        assert df_saved.iloc[0]["date"] == datetime.date(2025, 1, 1)
+        assert df_saved.iloc[0]["timestamp"] == pd.Timestamp("2025-01-01 12:00:00")
         assert df_saved.iloc[0]["element_name"] == "element1"
-        assert df_saved.iloc[1]["date"] == datetime.date(2025, 1, 1)
+        assert df_saved.iloc[1]["timestamp"] == pd.Timestamp("2025-01-01 12:00:00")
         assert df_saved.iloc[1]["element_name"] == "element2"
 
         # Clean up
@@ -638,10 +618,10 @@ class TestCFDRateIntegrationService:
         test_filename = "test_coverage.parquet"
         test_data = pd.DataFrame(
             {
-                "date": [
-                    datetime.date(2025, 1, 1),
-                    datetime.date(2025, 1, 2),
-                    datetime.date(2025, 1, 3),
+                "timestamp": [
+                    pd.Timestamp("2025-01-01 12:00:00"),
+                    pd.Timestamp("2025-01-02 12:00:00"),
+                    pd.Timestamp("2025-01-03 12:00:00"),
                 ],
                 "element_name": ["test_element"] * 3,
                 "value": [100.0, 200.0, 300.0],
@@ -674,13 +654,13 @@ class TestCFDRateIntegrationService:
         test_filename = "test_coverage.parquet"
         test_data = pd.DataFrame(
             {
-                "date": [
-                    datetime.date(2025, 1, 1),
-                    datetime.date(2025, 1, 1),
-                    datetime.date(2025, 1, 2),
-                    datetime.date(2025, 1, 2),
-                    datetime.date(2025, 1, 3),
-                    datetime.date(2025, 1, 3),
+                "timestamp": [
+                    pd.Timestamp("2025-01-01 12:00:00"),
+                    pd.Timestamp("2025-01-01 12:00:00"),
+                    pd.Timestamp("2025-01-02 12:00:00"),
+                    pd.Timestamp("2025-01-02 12:00:00"),
+                    pd.Timestamp("2025-01-03 12:00:00"),
+                    pd.Timestamp("2025-01-03 12:00:00"),
                 ],
                 "element_name": [
                     "element1",
@@ -750,9 +730,9 @@ class TestCFDRateIntegrationService:
         # Create test data with coverage for 2025-01-02 and 2025-01-04
         test_data = pd.DataFrame(
             {
-                "date": [
-                    datetime.date(2025, 1, 2),
-                    datetime.date(2025, 1, 4),
+                "timestamp": [
+                    pd.Timestamp("2025-01-02 12:00:00"),
+                    pd.Timestamp("2025-01-04 12:00:00"),
                 ],
                 "element_name": ["test_element"] * 2,
                 "value": [100.0, 300.0],
@@ -797,9 +777,9 @@ class TestCFDRateIntegrationService:
         # Create test data with full coverage for required dates
         test_data = pd.DataFrame(
             {
-                "date": [
-                    datetime.date(2025, 1, 2),
-                    datetime.date(2025, 1, 3),
+                "timestamp": [
+                    pd.Timestamp("2025-01-02 12:00:00"),
+                    pd.Timestamp("2025-01-03 12:00:00"),
                 ],
                 "element_name": ["test_element"] * 2,
                 "value": [100.0, 200.0],
@@ -838,9 +818,9 @@ class TestCFDRateIntegrationService:
         # Create test data with gaps: have data for dates 2 and 4, missing 3
         test_data = pd.DataFrame(
             {
-                "date": [
-                    datetime.date(2025, 1, 2),
-                    datetime.date(2025, 1, 4),
+                "timestamp": [
+                    pd.Timestamp("2025-01-02 12:00:00"),
+                    pd.Timestamp("2025-01-04 12:00:00"),
                 ],
                 "element_name": ["test_element"] * 2,
                 "value": [100.0, 300.0],
@@ -885,9 +865,9 @@ class TestCFDRateIntegrationService:
         # Create test data with gaps: have data for dates 2 and 5, missing 3-4
         test_data = pd.DataFrame(
             {
-                "date": [
-                    datetime.date(2025, 1, 2),
-                    datetime.date(2025, 1, 5),
+                "timestamp": [
+                    pd.Timestamp("2025-01-02 12:00:00"),
+                    pd.Timestamp("2025-01-05 12:00:00"),
                 ],
                 "element_name": ["test_element"] * 2,
                 "value": [100.0, 400.0],
@@ -938,7 +918,7 @@ class TestCFDRateIntegrationService:
 
         # Assert
         assert len(result) == 0
-        assert list(result.columns) == ["date", "element_name", "value"]
+        assert set(result.columns) == {"timestamp", "element_name", "value"}
 
     def test_query_integrated_cfd_rate_date_range_filtering(self):
         """Test _query_integrated_cfd_rate with date range filtering."""
@@ -947,12 +927,12 @@ class TestCFDRateIntegrationService:
 
         test_data = pd.DataFrame(
             {
-                "date": [
-                    datetime.date(2025, 1, 1),
-                    datetime.date(2025, 1, 2),
-                    datetime.date(2025, 1, 3),
-                    datetime.date(2025, 1, 4),
-                    datetime.date(2025, 1, 5),
+                "timestamp": [
+                    pd.Timestamp("2025-01-01 12:00:00"),
+                    pd.Timestamp("2025-01-02 12:00:00"),
+                    pd.Timestamp("2025-01-03 12:00:00"),
+                    pd.Timestamp("2025-01-04 12:00:00"),
+                    pd.Timestamp("2025-01-05 12:00:00"),
                 ],
                 "element_name": ["test_element"] * 5,
                 "value": [100.0, 200.0, 300.0, 400.0, 500.0],
@@ -975,8 +955,8 @@ class TestCFDRateIntegrationService:
 
         # Assert
         assert len(result) == 2
-        assert result.iloc[0]["date"] == datetime.date(2025, 1, 3)
-        assert result.iloc[1]["date"] == datetime.date(2025, 1, 4)
+        assert result.iloc[0]["timestamp"] == pd.Timestamp("2025-01-03 12:00:00")
+        assert result.iloc[1]["timestamp"] == pd.Timestamp("2025-01-04 12:00:00")
 
         # Clean up
         os.remove(test_filename)
@@ -988,11 +968,11 @@ class TestCFDRateIntegrationService:
 
         test_data = pd.DataFrame(
             {
-                "date": [
-                    datetime.date(2025, 1, 1),
-                    datetime.date(2025, 1, 1),
-                    datetime.date(2025, 1, 2),
-                    datetime.date(2025, 1, 2),
+                "timestamp": [
+                    pd.Timestamp("2025-01-01 12:00:00"),
+                    pd.Timestamp("2025-01-01 12:00:00"),
+                    pd.Timestamp("2025-01-02 12:00:00"),
+                    pd.Timestamp("2025-01-02 12:00:00"),
                 ],
                 "element_name": ["element1", "element2", "element1", "element2"],
                 "value": [100.0, 200.0, 300.0, 400.0],
@@ -1029,7 +1009,7 @@ class TestCFDRateIntegrationService:
 
         test_data = pd.DataFrame(
             {
-                "date": [datetime.date(2025, 1, 1)],
+                "timestamp": [pd.Timestamp("2025-01-01 12:00:00")],
                 "element_name": ["test_element"],
                 "value": [100.0],
             }
@@ -1063,10 +1043,10 @@ class TestCFDRateIntegrationService:
         # Create test data that covers the requested range
         test_data = pd.DataFrame(
             {
-                "date": [
-                    datetime.date(2025, 1, 1),
-                    datetime.date(2025, 1, 2),
-                    datetime.date(2025, 1, 3),
+                "timestamp": [
+                    pd.Timestamp("2025-01-01 12:00:00"),
+                    pd.Timestamp("2025-01-02 12:00:00"),
+                    pd.Timestamp("2025-01-03 12:00:00"),
                 ],
                 "element_name": ["ft0_dcs:FEE/PMA0/Ch01.actual.CFD_RATE"] * 3,
                 "value": [100.0, 200.0, 300.0],
@@ -1143,7 +1123,10 @@ class TestCFDRateIntegrationService:
         # Create test data with partial coverage for one element
         test_data = pd.DataFrame(
             {
-                "date": [datetime.date(2025, 1, 1), datetime.date(2025, 1, 2)],
+                "timestamp": [
+                    pd.Timestamp("2025-01-01 12:00:00"),
+                    pd.Timestamp("2025-01-02 12:00:00"),
+                ],
                 "element_name": ["ft0_dcs:FEE/PMA0/Ch01.actual.CFD_RATE"] * 2,
                 "value": [100.0, 200.0],
             }
@@ -1157,7 +1140,7 @@ class TestCFDRateIntegrationService:
 
         # Mock the DARMA API service to return data
         # for the missing day for ALL datapoints
-        # This simulates downloading all 224 datapoints together
+        # This simulates downloading all 212 datapoints together
         all_datapoints = list(self.service._get_datapoints())
         mock_raw_data_rows = []
 
@@ -1199,10 +1182,10 @@ class TestCFDRateIntegrationService:
         # Verify that the DARMA API was called with missing datapoints
         mock_call_args = self.service.darma_api_service.get_data.call_args
         assert mock_call_args is not None
-        # Should be called with fewer than 224 datapoints since
+        # Should be called with fewer than 212 datapoints since
         # PMA0/Ch01 already has data
         assert (
-            len(mock_call_args[1]["elements"]) == 223
+            len(mock_call_args[1]["elements"]) == 211
         )  # All datapoints except PMA0/Ch01
 
         # Clean up
@@ -1239,8 +1222,8 @@ class TestCFDRateIntegrationService:
     def test_download_and_integrate_chunk_success(self):
         """Test _download_and_integrate_chunk method with successful download."""
         # Arrange
-        start_date = datetime.date(2025, 1, 1)
-        end_date = datetime.date(2025, 1, 1)
+        start_datetime = datetime.datetime(2025, 1, 1, 12, 0, 0)
+        end_datetime = datetime.datetime(2025, 1, 2, 11, 59, 59, 999999)
         element_names = ["test_element"]
 
         # Mock raw data from DARMA API
@@ -1260,19 +1243,19 @@ class TestCFDRateIntegrationService:
 
         # Act
         result = self.service._download_and_integrate_chunk(
-            start_date, end_date, element_names
+            start_datetime, end_datetime, element_names
         )
 
         # Assert
         assert len(result) == 1  # Should have one integrated record
         assert result.iloc[0]["element_name"] == "test_element"
-        assert result.iloc[0]["timestamp"] == pd.Timestamp("2025-01-02 12:00:00")
+        assert result.iloc[0]["timestamp"] == pd.Timestamp("2025-01-02 11:59:59.999999")
 
     def test_download_and_integrate_chunk_empty_response(self):
         """Test _download_and_integrate_chunk method with empty response."""
         # Arrange
-        start_date = datetime.date(2025, 1, 1)
-        end_date = datetime.date(2025, 1, 1)
+        start_datetime = datetime.datetime(2025, 1, 1, 12, 0, 0)
+        end_datetime = datetime.datetime(2025, 1, 2, 11, 59, 59, 999999)
         element_names = ["test_element"]
 
         # Mock empty response from DARMA API
@@ -1282,7 +1265,7 @@ class TestCFDRateIntegrationService:
 
         # Act
         result = self.service._download_and_integrate_chunk(
-            start_date, end_date, element_names
+            start_datetime, end_datetime, element_names
         )
 
         # Assert
@@ -1293,8 +1276,8 @@ class TestCFDRateIntegrationService:
     def test_download_and_integrate_chunk_exception(self):
         """Test _download_and_integrate_chunk method with exception."""
         # Arrange
-        start_date = datetime.date(2025, 1, 1)
-        end_date = datetime.date(2025, 1, 1)
+        start_datetime = datetime.datetime(2025, 1, 1, 12, 0, 0)
+        end_datetime = datetime.datetime(2025, 1, 2, 11, 59, 59, 999999)
         element_names = ["test_element"]
 
         # Mock exception from DARMA API
@@ -1304,7 +1287,7 @@ class TestCFDRateIntegrationService:
 
         # Act
         result = self.service._download_and_integrate_chunk(
-            start_date, end_date, element_names
+            start_datetime, end_datetime, element_names
         )
 
         # Assert
@@ -1334,11 +1317,11 @@ class TestCFDRateIntegrationService:
         )
 
         # Assert
-        # Verify that the DARMA API was called with all 224 datapoints in a single call
+        # Verify that the DARMA API was called with all 212 datapoints in a single call
         # (since no data exists, all datapoints are missing)
         mock_call_args = self.service.darma_api_service.get_data.call_args
         assert mock_call_args is not None
-        assert len(mock_call_args[1]["elements"]) == 224  # All datapoints
+        assert len(mock_call_args[1]["elements"]) == 212  # All datapoints
 
         # Verify it was called twice (once for each chunk)
         assert self.service.darma_api_service.get_data.call_count == 2
@@ -1372,7 +1355,8 @@ class TestCFDRateIntegrationService:
             os.remove(test_filename)
 
         # Act
-        integrated_data = self.service._integrate_cfd_rate(test_data)
+        end_datetime = datetime.datetime(2025, 7, 3, 12, 0, 0)
+        integrated_data = self.service._integrate_cfd_rate(test_data, end_datetime)
         self.service._save_integrated_cfd_rate(integrated_data, test_filename)
 
         # Assert
@@ -1380,23 +1364,15 @@ class TestCFDRateIntegrationService:
         # Data from July 2 12pm onwards should be assigned to July 3
         df_saved = pd.read_parquet(test_filename)
 
-        # Should have 3 integration periods:
-        # 1. July 1 11:59 (before 12pm) → July 1
-        # 2. July 1 12:00 to July 2 11:59 (12pm-12pm period) → July 2
-        # 3. July 2 12:00 (after 12pm) → July 3
-        assert len(df_saved) == 3
+        # Should have 1 integration period since service now
+        # integrates all data into single timestamp
+        assert len(df_saved) == 1
 
-        # Sort by date to ensure consistent order
-        df_saved = df_saved.sort_values("date").reset_index(drop=True)
+        # Sort by timestamp to ensure consistent order
+        df_saved = df_saved.sort_values("timestamp").reset_index(drop=True)
 
-        # First period: July 1 11:59 → assigned to July 1
-        assert df_saved.iloc[0]["date"] == datetime.date(2025, 7, 1)
-
-        # Second period: July 1 12pm to July 2 12pm → assigned to July 2
-        assert df_saved.iloc[1]["date"] == datetime.date(2025, 7, 2)
-
-        # Third period: July 2 12pm to July 3 12pm → assigned to July 3
-        assert df_saved.iloc[2]["date"] == datetime.date(2025, 7, 3)
+        # All data gets integrated into the end_datetime timestamp
+        assert df_saved.iloc[0]["timestamp"] == pd.Timestamp("2025-07-03 12:00:00")
 
         # Clean up
         os.remove(test_filename)
@@ -1409,15 +1385,15 @@ class TestCFDRateIntegrationService:
         # Create test data with known integration dates
         test_data = pd.DataFrame(
             {
-                "date": [
-                    datetime.date(
-                        2025, 7, 2
+                "timestamp": [
+                    pd.Timestamp(
+                        "2025-07-02 12:00:00"
                     ),  # Integration from July 1 12pm to July 2 12pm
-                    datetime.date(
-                        2025, 7, 3
+                    pd.Timestamp(
+                        "2025-07-03 12:00:00"
                     ),  # Integration from July 2 12pm to July 3 12pm
-                    datetime.date(
-                        2025, 7, 4
+                    pd.Timestamp(
+                        "2025-07-04 12:00:00"
                     ),  # Integration from July 3 12pm to July 4 12pm
                 ],
                 "element_name": ["test_element"] * 3,
@@ -1439,7 +1415,7 @@ class TestCFDRateIntegrationService:
             datetime.date(2025, 7, 1), datetime.date(2025, 7, 2), filename=test_filename
         )
         assert len(result_1_2) == 1
-        assert result_1_2.iloc[0]["date"] == datetime.date(2025, 7, 2)
+        assert result_1_2.iloc[0]["timestamp"] == pd.Timestamp("2025-07-02 12:00:00")
 
         # Query for July 1-3 should return July 2, July 3, and July 4:
         # - July 1 12pm to July 2 12pm → July 2
@@ -1449,8 +1425,8 @@ class TestCFDRateIntegrationService:
             datetime.date(2025, 7, 1), datetime.date(2025, 7, 3), filename=test_filename
         )
         assert len(result_1_3) == 2
-        assert result_1_3.iloc[0]["date"] == datetime.date(2025, 7, 2)
-        assert result_1_3.iloc[1]["date"] == datetime.date(2025, 7, 3)
+        assert result_1_3.iloc[0]["timestamp"] == pd.Timestamp("2025-07-02 12:00:00")
+        assert result_1_3.iloc[1]["timestamp"] == pd.Timestamp("2025-07-03 12:00:00")
 
         # Query for July 2-3 should return July 3 and July 4:
         # - July 2 12pm to July 3 12pm → July 3
@@ -1459,79 +1435,7 @@ class TestCFDRateIntegrationService:
             datetime.date(2025, 7, 2), datetime.date(2025, 7, 3), filename=test_filename
         )
         assert len(result_2_3) == 1
-        assert result_2_3.iloc[0]["date"] == datetime.date(2025, 7, 3)
-
-        # Clean up
-        os.remove(test_filename)
-
-    def test_get_integrated_cfd_rate_partial_datapoints_missing(self):
-        """Test that get_integrated_cfd_rate downloads
-        only missing datapoints when some data exists."""
-        # Arrange
-        test_filename = "test_partial_missing.parquet"
-
-        # Create test data with partial coverage for only 2 datapoints
-        test_data = pd.DataFrame(
-            {
-                "date": [
-                    datetime.date(
-                        2025, 7, 2
-                    ),  # Integration from July 1 12pm to July 2 12pm
-                    datetime.date(
-                        2025, 7, 3
-                    ),  # Integration from July 2 12pm to July 3 12pm
-                ],
-                "element_name": [
-                    "ft0_dcs:FEE/PMA0/Ch01.actual.CFD_RATE",
-                    "ft0_dcs:FEE/PMA0/Ch01.actual.CFD_RATE",
-                ],
-                "value": [100.0, 200.0],
-            }
-        )
-
-        # Clean up any existing test file
-        if os.path.exists(test_filename):
-            os.remove(test_filename)
-
-        test_data.to_parquet(test_filename, index=False)
-
-        # Mock the DARMA API service to return data for missing datapoints
-        mock_raw_data = pd.DataFrame(
-            {
-                "timestamp": [
-                    pd.Timestamp("2025-07-01 12:00:00"),
-                    pd.Timestamp("2025-07-01 13:00:00"),
-                ],
-                "value": [10.0, 20.0],
-                "element_name": ["ft0_dcs:FEE/PMA1/Ch01.actual.CFD_RATE"] * 2,
-            }
-        )
-
-        self.service.darma_api_service.get_data = Mock(return_value=mock_raw_data)
-
-        start_date = datetime.date(2025, 7, 1)
-        end_date = datetime.date(2025, 7, 3)
-
-        # Act
-        self.service.get_integrated_cfd_rate(
-            start_date, end_date, filename=test_filename
-        )
-
-        # Assert
-        # Verify that the DARMA API was called with only the missing datapoints
-        # (not all 224 datapoints)
-        mock_call_args = self.service.darma_api_service.get_data.call_args
-        assert mock_call_args is not None
-
-        # Should be called with fewer than 224 datapoints since some data already exists
-        called_datapoints = mock_call_args[1]["elements"]
-        assert len(called_datapoints) < 224
-
-        # Should include the missing datapoint
-        assert "ft0_dcs:FEE/PMA1/Ch01.actual.CFD_RATE" in called_datapoints
-
-        # Should not include the datapoint that already has data
-        assert "ft0_dcs:FEE/PMA0/Ch01.actual.CFD_RATE" not in called_datapoints
+        assert result_2_3.iloc[0]["timestamp"] == pd.Timestamp("2025-07-03 12:00:00")
 
         # Clean up
         os.remove(test_filename)
@@ -1622,8 +1526,8 @@ class TestCFDRateIntegrationService:
     def test_download_and_integrate_chunk_with_missing_elements(self):
         """Test _download_and_integrate_chunk handles missing elements correctly."""
         # Arrange
-        start_date = datetime.date(2025, 7, 1)
-        end_date = datetime.date(2025, 7, 2)
+        start_datetime = datetime.datetime(2025, 7, 1, 12, 0, 0)
+        end_datetime = datetime.datetime(2025, 7, 2, 11, 59, 59, 999999)
         element_names = ["element1", "element2", "element3"]
 
         # Mock DARMA API to return data for only one element
@@ -1644,41 +1548,25 @@ class TestCFDRateIntegrationService:
 
         # Act
         result = self.service._download_and_integrate_chunk(
-            start_date, end_date, element_names
+            start_datetime, end_datetime, element_names
         )
 
         # Assert
-        # Should have records for all 3 elements for July 2, and element1 for July 3
-        assert len(result) == 4  # 1 day × 3 elements + 1 day × 1 element
+        # Should have records for all 3 elements for the integrated period
+        assert len(result) == 3  # 3 elements, each with single integrated timestamp
         assert set(result["element_name"].unique()) == set(element_names)
 
-        # element1 should have integrated values for both July 2 and July 3
+        # element1 should have integrated values
         element1_data = result[result["element_name"] == "element1"]
-        assert len(element1_data) == 2
+        assert len(element1_data) == 1
+        assert element1_data.iloc[0]["value"] > 0  # Should have some integrated value
 
-        # July 2 should have integrated value
-        july2_element1 = element1_data[
-            element1_data["timestamp"].dt.date == datetime.date(2025, 7, 2)
-        ]
-        assert len(july2_element1) == 1
-        assert july2_element1.iloc[0]["value"] > 0  # Should have some integrated value
-
-        # July 3 should have integrated value
-        july3_element1 = element1_data[
-            element1_data["timestamp"].dt.date == datetime.date(2025, 7, 3)
-        ]
-        assert len(july3_element1) == 1
-        assert july3_element1.iloc[0]["value"] > 0  # Should have some integrated value
-
-        # element2 and element3 should have 0 values for July 2 only
+        # element2 and element3 should have 0 values
         missing_elements_data = result[
             result["element_name"].isin(["element2", "element3"])
         ]
-        assert len(missing_elements_data) == 2  # 1 day × 2 elements
+        assert len(missing_elements_data) == 2  # 2 elements
         assert all(missing_elements_data["value"] == 0.0)
-        assert all(
-            missing_elements_data["timestamp"].dt.date == datetime.date(2025, 7, 2)
-        )
 
     def test_sum_integrated_cfd_rate_without_mu(self):
         """Test _sum_integrated_cfd_rate without mu multiplication."""
@@ -1825,11 +1713,11 @@ class TestCFDRateIntegrationService:
         # Mock the query to return some data
         mock_data = pd.DataFrame(
             {
-                "date": [
-                    datetime.date(2025, 1, 2),
-                    datetime.date(2025, 1, 3),
-                    datetime.date(2025, 1, 2),
-                    datetime.date(2025, 1, 3),
+                "timestamp": [
+                    pd.Timestamp("2025-01-02 12:00:00"),
+                    pd.Timestamp("2025-01-03 12:00:00"),
+                    pd.Timestamp("2025-01-02 12:00:00"),
+                    pd.Timestamp("2025-01-03 12:00:00"),
                 ],
                 "element_name": [
                     "ft0_dcs:FEE/PMA0/Ch01.actual.CFD_RATE",
