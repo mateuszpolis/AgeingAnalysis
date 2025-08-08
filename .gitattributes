@@ -1,0 +1,2 @@
+# Ensure Parquet files are treated as binary by Git (no EOL conversion, no text filters)
+*.parquet binary

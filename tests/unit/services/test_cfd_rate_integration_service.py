@@ -1731,13 +1731,33 @@ class TestCFDRateIntegrationService:
 
         self.service._query_integrated_cfd_rate = Mock(return_value=mock_data)
 
+        # Ensure the method does not attempt to write to the default parquet file
+        # by indicating no missing ranges and using a test filename
+        self.service._get_missing_date_ranges = Mock(return_value={})
+
+        test_filename = "test_mu_param.parquet"
+        if os.path.exists(test_filename):
+            os.remove(test_filename)
+
         # Act
         result_without_mu = self.service.get_integrated_cfd_rate(
-            start_date, end_date, multiply_by_mu=False, include_pmc9=False
+            start_date,
+            end_date,
+            multiply_by_mu=False,
+            include_pmc9=False,
+            filename=test_filename,
         )
         result_with_mu = self.service.get_integrated_cfd_rate(
-            start_date, end_date, multiply_by_mu=True, include_pmc9=False
+            start_date,
+            end_date,
+            multiply_by_mu=True,
+            include_pmc9=False,
+            filename=test_filename,
         )
+
+        # Clean up
+        if os.path.exists(test_filename):
+            os.remove(test_filename)
 
         # Assert
         assert "PMA0" in result_without_mu

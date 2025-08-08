@@ -121,9 +121,21 @@ class DataParser:
         if len(peaks) < 2:
             raise ValueError("Could not find at least two peaks in the summed signal.")
         elif len(peaks) > 2:
-            raise ValueError(
-                "Found more than two peaks in the summed signal. "
-                "Please check the data for multiple peaks."
+            first_rb = props["right_bases"][0]
+            second_lb = props["left_bases"][1]
+
+            if first_rb >= second_lb:
+                raise ValueError(
+                    "Found more than two peaks and the first peak overlaps "
+                    "with the second peak. Please check the data."
+                )
+            # Otherwise we silently continue, analysing only the first peak.
+            logger.debug(
+                "More than two peaks detected, but first peak (bins %d→%d) "
+                "is separated from the next (starts at bin %d). Proceeding.",
+                props["left_bases"][0],
+                first_rb,
+                second_lb,
             )
 
         # Take the first peak in order of bins (since we cut the first 50 bins)

@@ -154,10 +154,6 @@ class CFDRateIntegrationService:
                 d for d in required_records if d not in available_records_normalized
             )
 
-            print("Required records: ", required_records)
-            print("Available records: ", available_records_normalized)
-            print("Missing records: ", missing_records)
-
             # Group missing_records into contiguous ranges
             ranges = []
             if missing_records:
@@ -556,8 +552,6 @@ class CFDRateIntegrationService:
 
             # Move to next chunk of record dates
             current_record_date = chunk_record_end_date
-
-        print(all_integrated_data)
 
         return all_integrated_data
 
