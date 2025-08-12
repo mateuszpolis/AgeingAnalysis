@@ -346,11 +346,13 @@ class TestDarmaApiService:
             f.write(csv_content)
             temp_file_path = Path(f.name)
 
-        # Act & Assert
-        # The implementation doesn't handle empty files,
-        # so it should raise EmptyDataError
-        with pytest.raises(pd.errors.EmptyDataError):
-            self.service._parse_response(temp_file_path)
+        # Act
+        result = self.service._parse_response(temp_file_path)
+
+        # Assert
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 0
+        assert list(result.columns) == ["timestamp", "value", "element_name"]
 
         # Cleanup
         temp_file_path.unlink()
@@ -397,11 +399,13 @@ another_malformed_line_with_too_many_parts;part2;part3;part4;part5
         result = self.service._parse_response(temp_file_path)
 
         # Assert
-        # The implementation handles malformed lines
-        # by dropping rows with invalid timestamps
+        # Malformed lines are skipped; valid lines are kept
         assert isinstance(result, pd.DataFrame)
-        assert len(result) == 0  # All lines have invalid datetime format
+        assert len(result) == 3
         assert list(result.columns) == ["timestamp", "value", "element_name"]
+        assert result.iloc[0]["value"] == 123.45
+        assert result.iloc[1]["value"] == 67.89
+        assert result.iloc[2]["value"] == 99.99
 
         # Cleanup
         temp_file_path.unlink()
@@ -445,11 +449,15 @@ invalid_date;00:00:02;test_element2;67.89
             f.write(csv_content)
             temp_file_path = Path(f.name)
 
-        # Act & Assert
-        # The implementation uses dtype={'value': float}
-        # which will fail on non-numeric values
-        with pytest.raises(ValueError):
-            self.service._parse_response(temp_file_path)
+        # Act
+        result = self.service._parse_response(temp_file_path)
+
+        # Assert
+        # Non-numeric values are skipped; valid rows remain
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 2
+        assert result.iloc[0]["value"] == 123.45
+        assert result.iloc[1]["value"] == 67.89
 
         # Cleanup
         temp_file_path.unlink()

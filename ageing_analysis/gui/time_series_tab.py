@@ -163,8 +163,8 @@ class TimeSeriesTab:
         self._create_scrollable_channel_frame()
 
         # Initialize x-axis log option state after all UI elements are created
-        # X-axis log scale is now supported for both dates and integrated charge
-        # So we don't need to disable it based on selection
+        # X-axis logarithmic mode is only supported for Integrated Charge mode
+        self._update_x_log_state()
 
     def _create_scrollable_channel_frame(self):
         canvas = tk.Canvas(self.channel_frame, highlightthickness=0)
@@ -424,8 +424,8 @@ class TimeSeriesTab:
 
     def _on_x_axis_change(self):
         """Handle x-axis selection change and update log scale option availability."""
-        # X-axis log scale is now supported for both dates and integrated charge
-        # So we don't need to disable it based on selection
+        # X-axis log scale is only supported for integrated charge
+        self._update_x_log_state()
         self._update_plot()
 
     def _deselect_all_channels(self):
@@ -569,12 +569,18 @@ class TimeSeriesTab:
                                             (x_value, weighted_value)
                                         )
             colors = plt.cm.tab20(range(len(selected_channels)))
+            max_x_value = None  # Track max integrated charge among selected points
             for channel_key_method, data_points in channel_data.items():
                 if data_points:
                     data_points.sort(key=lambda x: x[0])
                     if use_integrated_charge:
                         # Unpack tuples with date information
                         x_values, values, dates = zip(*data_points)
+                        # Track the maximum integrated charge for axis scaling
+                        if x_values:
+                            current_max = max(x_values)
+                            if max_x_value is None or current_max > max_x_value:
+                                max_x_value = current_max
                     else:
                         # Unpack regular tuples
                         x_values, values = zip(*data_points)
@@ -641,52 +647,51 @@ class TimeSeriesTab:
             if use_integrated_charge:
                 self.ax.set_xlabel("Integrated Charge")
                 x_title = "Integrated Charge"
+                # Always start from 0 on the x-axis in integrated charge mode
+                if self.x_log_var.get():
+                    # Use a symlog scale to allow 0 while compressing high values
+                    # Determine a reasonable linear threshold relative to the max value
+                    linthresh = None
+                    if max_x_value is not None and max_x_value > 0:
+                        linthresh = max(1e-6, 0.01 * max_x_value)
+                    else:
+                        linthresh = 1e-6
+                    self.ax.set_xscale("symlog", linthresh=linthresh)
+                else:
+                    self.ax.set_xscale("linear")
+                # Enforce limits to start at 0 and end at the max integrated charge
+                if max_x_value is not None and max_x_value >= 0:
+                    self.ax.set_xlim(left=0, right=max_x_value)
+                else:
+                    self.ax.set_xlim(left=0)
             else:
                 self.ax.set_xlabel("Date")
                 x_title = "Date"
+                # Always linear scale for dates
+                self.ax.set_xscale("linear")
                 # Format x-axis for dates
                 num_datasets = len(datasets)
                 max_ticks = min(8, max(3, num_datasets))
                 from matplotlib.ticker import MaxNLocator
 
-                # Apply logarithmic scaling if requested
-                if self.x_log_var.get():
-                    # For dates with log scale, we need to handle formatting differently
-                    # Convert dates to numeric values for log scale
-                    self.ax.set_xscale("log")
-                    # Use a custom formatter for log scale dates
-                    from matplotlib.ticker import FuncFormatter
-
-                    def date_formatter(x, pos):
-                        try:
-                            # Convert numeric value back to date
-                            date = mdates.num2date(x)
-                            return date.strftime("%Y-%m-%d")
-                        except ValueError:
-                            return ""
-
-                    self.ax.xaxis.set_major_formatter(FuncFormatter(date_formatter))
-                    self.ax.xaxis.set_major_locator(
-                        MaxNLocator(nbins=max_ticks, prune="both")
-                    )
-                else:
-                    # Linear scale for dates
-                    self.ax.set_xscale("linear")
-                    self.ax.xaxis.set_major_locator(
-                        MaxNLocator(nbins=max_ticks, prune="both")
-                    )
-                    self.ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
-
+                self.ax.xaxis.set_major_locator(
+                    MaxNLocator(nbins=max_ticks, prune="both")
+                )
+                self.ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
                 plt.setp(self.ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
                 self.ax.tick_params(axis="x", which="major", pad=10)
 
             self.ax.set_ylabel("Normalized Ageing Factor")
 
-            # Apply logarithmic scaling for y-axis if requested
+            # Apply y-axis scaling
+            # Requirement: y-axis should always start from 0
             if self.y_log_var.get():
-                self.ax.set_yscale("log")
+                # Use symlog to include 0 while compressing values above 1 exponentially
+                # Anchor around 1.0 so that values near 1 are the transition
+                self.ax.set_yscale("symlog", linthresh=1.0)
             else:
                 self.ax.set_yscale("linear")
+            self.ax.set_ylim(bottom=0)
 
             title_methods = []
             if show_gaussian:
@@ -749,3 +754,21 @@ class TimeSeriesTab:
         self.ax.relim()
         self.ax.autoscale()
         self.canvas.draw_idle()
+
+    def _update_x_log_state(self) -> None:
+        """Enable or disable the X-axis logarithmic option based on mode.
+
+        Logarithmic X-axis is only applicable when using Integrated Charge on the X-axis
+        and when integrated charge data is available.
+        """
+        use_integrated = self.x_axis_var.get() == "integrated_charge"
+        # Guard against None for mypy: x_log_checkbutton is set in _create_control_panel
+        x_log_btn = getattr(self, "x_log_checkbutton", None)
+        if getattr(self, "integrated_charge_available", False) and use_integrated:
+            if x_log_btn is not None:
+                x_log_btn.config(state="normal")
+        else:
+            # Disable and reset the toggle when not applicable
+            self.x_log_var.set(False)
+            if x_log_btn is not None:
+                x_log_btn.config(state="disabled")

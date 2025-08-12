@@ -272,8 +272,25 @@ class CFDRateIntegrationService:
         if len(df) < 2:
             return 0.0
 
-        # Sort by timestamp
-        df_sorted = df.sort_values("timestamp")
+        # Sort by timestamp and sanitize inputs
+        df_sorted = df.sort_values("timestamp").copy()
+        df_sorted["value"] = pd.to_numeric(df_sorted["value"], errors="coerce")
+        # Replace non-finite with 0 and clip negatives to zero
+        # (rates should be non-negative)
+        non_finite = df_sorted["value"].isna() | ~np.isfinite(df_sorted["value"])
+        if non_finite.any():
+            logger.warning(
+                "Integration: found %d non-finite values; setting to 0.0",
+                int(non_finite.sum()),
+            )
+            df_sorted.loc[non_finite, "value"] = 0.0
+        negatives = df_sorted["value"] < 0
+        if negatives.any():
+            logger.warning(
+                "Integration: found %d negative values; clipping to 0.0",
+                int(negatives.sum()),
+            )
+            df_sorted.loc[negatives, "value"] = 0.0
 
         # Convert timestamps to seconds since epoch
         timestamps = pd.to_datetime(df_sorted["timestamp"]).astype("int64") / 1e9
@@ -283,8 +300,80 @@ class CFDRateIntegrationService:
         dt = np.diff(timestamps)
         avg_values = (values[1:] + values[:-1]) / 2
 
+        # Interval-level contributions and diagnostics
+        contributions = avg_values * dt
+        if len(dt) > 0:
+            dt_min, dt_max = float(np.min(dt)), float(np.max(dt))
+            dt_mean = float(np.mean(dt))
+            dt_median = float(np.median(dt))
+        else:
+            dt_min = dt_max = dt_mean = dt_median = 0.0
+        values_min = float(np.min(values)) if len(values) else 0.0
+        values_max = float(np.max(values)) if len(values) else 0.0
+        values_median = float(np.median(values)) if len(values) else 0.0
+        logger.debug(
+            "Integration diagnostics: n=%d, dt[min/median/mean/max]=[%s,%s,%s,%s], "
+            "value[min/median/max]=[%s,%s,%s]",
+            len(values),
+            dt_min,
+            dt_median,
+            dt_mean,
+            dt_max,
+            values_min,
+            values_median,
+            values_max,
+        )
+
         # Vectorized trapezoidal integration
-        integrated_value: float = np.sum(avg_values * dt)
+        integrated_value: float = np.sum(contributions)
+
+        # Suspicious detection heuristics
+        suspicious = False
+        reason = []
+        if values_max > 1e9:
+            suspicious = True
+            reason.append(f"values_max={values_max}")
+        if dt_max > 7 * 24 * 3600:  # any single gap > 7 days
+            suspicious = True
+            reason.append(f"dt_max={dt_max}s")
+        if integrated_value > 1e16:
+            suspicious = True
+            reason.append(f"integrated={integrated_value}")
+        if np.any(~np.isfinite(contributions)):
+            suspicious = True
+            reason.append("non-finite contribution")
+
+        if suspicious:
+            try:
+                top_idx = np.argsort(contributions)[-3:][::-1]
+                top_details = []
+                for i in top_idx:
+                    i = int(i)
+                    if i < 0 or (i + 1) >= len(timestamps):
+                        continue
+                    top_details.append(
+                        {
+                            "t_start": float(timestamps[i]),
+                            "t_end": float(timestamps[i + 1]),
+                            "dt": float(dt[i]),
+                            "avg_value": float(avg_values[i]),
+                            "contribution": float(contributions[i]),
+                        }
+                    )
+                logger.info(
+                    "Suspicious integration detected (%s). Top contributions: %s",
+                    ", ".join(reason),
+                    top_details,
+                )
+            except Exception as e:
+                logger.info("Failed to report top contributions: %s", e)
+
+        if not np.isfinite(integrated_value) or integrated_value < 0:
+            logger.warning(
+                "Integration produced invalid result (value=%s). Forcing to 0.0",
+                integrated_value,
+            )
+            integrated_value = 0.0
 
         return integrated_value
 
@@ -322,6 +411,24 @@ class CFDRateIntegrationService:
             df.groupby("element_name").apply(integrate_group).reset_index(drop=True)
         )
 
+        # Integrated results extremes for this chunk
+        try:
+            if not result.empty:
+                top5 = result.nlargest(5, "value")[
+                    ["element_name", "timestamp", "value"]
+                ]
+                bottom_pos = result[result["value"] > 0].nsmallest(5, "value")[
+                    ["element_name", "timestamp", "value"]
+                ]
+                logger.info(
+                    "Integrated results (chunk end=%s): top5=%s, bottom_pos=%s",
+                    end_datetime,
+                    top5.to_dict(orient="records"),
+                    bottom_pos.to_dict(orient="records"),
+                )
+        except Exception as e:
+            logger.debug("Failed to log integrated extremes: %s", e)
+
         return result
 
     def get_integrated_cfd_rate(
@@ -332,6 +439,8 @@ class CFDRateIntegrationService:
         filename: Optional[str] = "storage/cfd_rate/integrated_cfd_rate.parquet",
         multiply_by_mu: bool = False,
         include_pmc9: bool = True,
+        include_range_correction: bool = False,
+        use_latest_available_configuration: bool = False,
     ) -> Dict[str, Dict[str, float]]:
         """Get integrated CFD rate data for the specified date range.
 
@@ -343,6 +452,8 @@ class CFDRateIntegrationService:
                 If None, uses default based on dataset.
             multiply_by_mu: If True, multiply the integrated CFD rate by the mu
                 value.
+            include_range_correction: If True, include the range correction in the
+                integrated CFD rate.
 
         Returns:
             Dictionary with PM as keys and dictionaries with Channels as keys
@@ -406,6 +517,8 @@ class CFDRateIntegrationService:
             self._query_integrated_cfd_rate(start_date, end_date, filename=filename),
             multiply_by_mu,
             include_pmc9,
+            include_range_correction,
+            use_latest_available_configuration,
         )
 
     def _get_pm_and_channel_from_element_name(
@@ -428,6 +541,8 @@ class CFDRateIntegrationService:
         integrated_data: pd.DataFrame,
         multiply_by_mu: bool = False,
         include_pmc9: bool = True,
+        include_range_correction: bool = False,
+        use_latest_available_configuration: bool = False,
     ) -> Dict[str, Dict[str, float]]:
         """Sum the integrated CFD rate by PM and Channel.
 
@@ -437,10 +552,17 @@ class CFDRateIntegrationService:
             multiply_by_mu: If True, multiply the integrated CFD rate by the mu
                 value.
             include_pmc9: If True, include PMC9 channels 9, 10, 11, 12 in the result.
+            include_range_correction: If True, include the range correction in the
+                integrated CFD rate. Defaults to False in this method; the public
+                API `get_integrated_cfd_rate` controls this explicitly.
 
         Returns:
             Dictionary with PM as keys and dictionaries with Channels as keys
             and values as integrated CFD rates for the requested range.
+
+        Raises:
+            ValueError: If the range correction factor is missing for some non-zero
+                integrations.
         """
         if integrated_data.empty:
             return {}
@@ -454,14 +576,354 @@ class CFDRateIntegrationService:
         # Concatenate with original data
         df = pd.concat([integrated_data, pm_channel_df], axis=1)
 
+        # Ensure numeric dtype and sanitize values
+        df["value"] = pd.to_numeric(df["value"], errors="coerce")
+        num_non_numeric = df["value"].isna().sum()
+        if num_non_numeric:
+            logger.warning(
+                "Found %d non-numeric integrated values; coercing to 0.0",
+                num_non_numeric,
+            )
+        df["value"] = df["value"].fillna(0.0)
+
+        # Clip negatives which should not occur for positive-only rates
+        num_negative = (df["value"] < 0).sum()
+        if num_negative:
+            logger.warning(
+                "Found %d negative integrated values; clipping to 0.0",
+                num_negative,
+            )
+            df.loc[df["value"] < 0, "value"] = 0.0
+
+        logger.info(
+            "Integrated values before MU: count=%d, min=%s, max=%s, mean=%s",
+            len(df),
+            df["value"].min(),
+            df["value"].max(),
+            df["value"].mean(),
+        )
+
+        # Additional context: median and a few largest values
+        # with timestamps before any summation
+        try:
+            median_value = float(df["value"].median())
+            logger.info("Median value before MU: %s", median_value)
+
+            top_rows = df.nlargest(5, "value")[
+                ["timestamp", "pm", "channel", "element_name", "value"]
+            ].copy()
+            # Format compact preview of top rows
+            top_preview = [
+                {
+                    "timestamp": str(row["timestamp"]),
+                    "pm": row["pm"],
+                    "channel": row["channel"],
+                    "value": float(row["value"]),
+                    "element": row["element_name"],
+                }
+                for _, row in top_rows.iterrows()
+            ]
+            logger.info(
+                "Top 5 values before MU (timestamp, pm/channel, value): %s", top_preview
+            )
+        except Exception as e:
+            logger.debug("Failed to log top values preview: %s", e)
+
         mu = 43 * 10**-15
 
         # Apply mu multiplication to individual values before grouping if requested
         if multiply_by_mu:
             df["value"] = df["value"] * mu
+            logger.debug(
+                "After MU multiply: min=%s, max=%s, mean=%s",
+                df["value"].min(),
+                df["value"].max(),
+                df["value"].mean(),
+            )
+
+        if include_range_correction:
+            # Fetch range correction factors for all integration end timestamps
+            unique_timestamps = pd.Series(sorted(df["timestamp"].unique()))
+            rc_df = self.range_correction_service.get_range_correction_factors(
+                unique_timestamps
+            )
+
+            # Prepare for join: match on end timestamp, pm, channel
+            rc_df = rc_df.rename(columns={"end_timestamp": "timestamp"})[
+                ["timestamp", "pm", "channel", "range_correction_factor"]
+            ]
+            # Ensure factor is numeric
+            rc_df["range_correction_factor"] = pd.to_numeric(
+                rc_df["range_correction_factor"], errors="coerce"
+            )
+
+            # Join and apply correction: value *= 2048 / factor
+            rows_before_merge = len(df)
+            df = df.merge(rc_df, on=["timestamp", "pm", "channel"], how="left")
+            if len(df) > rows_before_merge:
+                logger.warning(
+                    "Range-correction join increased row count from %d to %d; "
+                    "possible duplicate factors",
+                    rows_before_merge,
+                    len(df),
+                )
+
+            # Handle missing factors:
+            # - If integrated value is 0 -> default factor to 2048 and proceed
+            # - Else -> raise error (configuration missing while value is nonzero)
+            missing_mask = df["range_correction_factor"].isna()
+            if missing_mask.any():
+                zero_value_mask = missing_mask & (df["value"] == 0.0)
+                nonzero_missing = df[missing_mask & ~zero_value_mask][
+                    ["timestamp", "pm", "channel", "value"]
+                ]
+                if not nonzero_missing.empty:
+                    # Try fallback if requested: use latest available configuration
+                    if use_latest_available_configuration:
+                        # Map end timestamps to start timestamps
+                        unique_ts_series = pd.Series(
+                            sorted(df["timestamp"].unique())
+                        ).astype("datetime64[ns]")
+                        unique_ts_series = pd.to_datetime(unique_ts_series)
+                        ts_map_df = pd.DataFrame(
+                            {
+                                "end_timestamp": unique_ts_series,
+                            }
+                        )
+                        ts_map_df["start_timestamp"] = ts_map_df["end_timestamp"].shift(
+                            1
+                        )
+                        ts_map_df.loc[
+                            ts_map_df["start_timestamp"].isna(), "start_timestamp"
+                        ] = ts_map_df["end_timestamp"].iloc[0] - datetime.timedelta(
+                            days=1
+                        )
+
+                        # Load configuration loads
+                        cfg_path = (
+                            self.range_correction_service.configuration_loads_file_path
+                        )
+                        cfg_df_fb = pd.read_parquet(cfg_path)
+                        cfg_df_fb = cfg_df_fb.copy()
+                        if (
+                            "timestamp" not in cfg_df_fb.columns
+                            or "configuration_name" not in cfg_df_fb.columns
+                        ):
+                            raise ValueError(
+                                "Configuration loads parquet must contain "
+                                "'timestamp' and 'configuration_name' columns"
+                            )
+                        cfg_df_fb["timestamp"] = pd.to_datetime(
+                            cfg_df_fb["timestamp"].astype("datetime64[ns]")
+                        )
+                        cfg_df_fb = cfg_df_fb.sort_values("timestamp")
+
+                        ts_map_df = pd.merge_asof(
+                            ts_map_df.sort_values("start_timestamp"),
+                            cfg_df_fb[["timestamp", "configuration_name"]].sort_values(
+                                "timestamp"
+                            ),
+                            left_on="start_timestamp",
+                            right_on="timestamp",
+                            direction="backward",
+                        )
+
+                        # Load range corrections for detector and build lookup
+                        rc_path = (
+                            self.range_correction_service.range_corrections_file_path
+                        )
+                        rc_all = pd.read_parquet(rc_path)
+                        rc_all = rc_all[
+                            rc_all["detector_name"]
+                            == self.range_correction_service.detector_name
+                        ]
+                        rc_lookup = {
+                            (row["configuration"], row["pm"], row["channel"]): row[
+                                "value"
+                            ]
+                            for _, row in rc_all.iterrows()
+                        }
+
+                        # Attempt to backfill by walking back configs
+                        for _, row in nonzero_missing.iterrows():
+                            end_ts = row["timestamp"]
+                            pm = row["pm"]
+                            channel = row["channel"]
+                            start_ts_ser = ts_map_df.loc[
+                                ts_map_df["end_timestamp"] == end_ts, "start_timestamp"
+                            ]
+                            if start_ts_ser.empty:
+                                continue
+                            start_ts = start_ts_ser.iloc[0]
+
+                            # Start from config at or before start_ts and walk back
+                            cfg_pos = (
+                                cfg_df_fb[cfg_df_fb["timestamp"] <= start_ts].shape[0]
+                                - 1
+                            )
+                            while cfg_pos >= 0:
+                                cfg_name = cfg_df_fb.iloc[cfg_pos]["configuration_name"]
+                                key = (cfg_name, pm, channel)
+                                if key in rc_lookup:
+                                    df.loc[
+                                        (df["timestamp"] == end_ts)
+                                        & (df["pm"] == pm)
+                                        & (df["channel"] == channel),
+                                        "range_correction_factor",
+                                    ] = rc_lookup[key]
+                                    break
+                                cfg_pos -= 1
+
+                        # Recompute masks after attempting backfill
+                        missing_mask = df["range_correction_factor"].isna()
+                        nonzero_missing = df[missing_mask & ~zero_value_mask][
+                            ["timestamp", "pm", "channel", "value"]
+                        ]
+
+                        # If still missing and fallback is enabled, default to
+                        # neutral factor 2048
+                        if not nonzero_missing.empty:
+                            logger.warning(
+                                "Defaulting to neutral range-correction factor "
+                                "(2048) for %d entries after fallback",
+                                len(nonzero_missing),
+                            )
+                            df.loc[
+                                missing_mask & ~zero_value_mask,
+                                "range_correction_factor",
+                            ] = 2048.0
+                            # Recompute masks again
+                            missing_mask = df["range_correction_factor"].isna()
+                            nonzero_missing = df[missing_mask & ~zero_value_mask][
+                                ["timestamp", "pm", "channel", "value"]
+                            ]
+
+                    # If still missing and fallback not enabled,
+                    # raise with configuration names
+                    if not nonzero_missing.empty:
+                        # Determine configuration names for the affected timestamps
+                        unique_ts_series = pd.Series(
+                            sorted(df["timestamp"].unique())
+                        ).astype("datetime64[ns]")
+                        unique_ts_series = pd.to_datetime(unique_ts_series)
+                        ts_map_df = pd.DataFrame(
+                            {
+                                "end_timestamp": unique_ts_series,
+                            }
+                        )
+                        ts_map_df["start_timestamp"] = ts_map_df["end_timestamp"].shift(
+                            1
+                        )
+                        ts_map_df.loc[
+                            ts_map_df["start_timestamp"].isna(), "start_timestamp"
+                        ] = ts_map_df["end_timestamp"].iloc[0] - datetime.timedelta(
+                            days=1
+                        )
+
+                        # Read configuration loads
+                        cfg_path = (
+                            self.range_correction_service.configuration_loads_file_path
+                        )
+                        cfg_df = pd.read_parquet(cfg_path)
+                        cfg_df = cfg_df.copy()
+                        if (
+                            "timestamp" not in cfg_df.columns
+                            or "configuration_name" not in cfg_df.columns
+                        ):
+                            raise ValueError(
+                                "Configuration loads parquet must contain "
+                                "'timestamp' and 'configuration_name' columns"
+                            )
+                        cfg_df["timestamp"] = pd.to_datetime(
+                            cfg_df["timestamp"].astype("datetime64[ns]")
+                        )
+                        cfg_df = cfg_df.sort_values("timestamp")
+
+                        ts_map_df = pd.merge_asof(
+                            ts_map_df.sort_values("start_timestamp"),
+                            cfg_df[["timestamp", "configuration_name"]].sort_values(
+                                "timestamp"
+                            ),
+                            left_on="start_timestamp",
+                            right_on="timestamp",
+                            direction="backward",
+                        )
+
+                        end_ts_to_config = dict(
+                            zip(
+                                ts_map_df["end_timestamp"],
+                                ts_map_df["configuration_name"],
+                            )
+                        )
+
+                        nonzero_missing = nonzero_missing.copy()
+                        nonzero_missing["configuration_name"] = nonzero_missing[
+                            "timestamp"
+                        ].map(end_ts_to_config)
+                        missing_config_names = sorted(
+                            {
+                                c
+                                for c in nonzero_missing["configuration_name"]
+                                .dropna()
+                                .unique()
+                                .tolist()
+                            }
+                        )
+                        raise ValueError(
+                            "Missing range correction factor for configurations: "
+                            f"{missing_config_names}"
+                        )
+                # Default factor for zero-value entries
+                df.loc[zero_value_mask, "range_correction_factor"] = 2048.0
+
+            # Validate range-correction factors: non-finite or non-positive are unsafe
+            invalid_factor_mask = ~np.isfinite(df["range_correction_factor"]) | (
+                df["range_correction_factor"] <= 0
+            )
+            if invalid_factor_mask.any():
+                count_invalid = int(invalid_factor_mask.sum())
+                logger.warning(
+                    "Found %d invalid range_correction_factor entries (<=0 or "
+                    "non-finite); defaulting to 2048",
+                    count_invalid,
+                )
+                df.loc[invalid_factor_mask, "range_correction_factor"] = 2048.0
+
+            # Apply correction: value *= 2048 / factor
+            df["value"] = df["value"] * (2048.0 / df["range_correction_factor"])
+            df = df.drop(columns=["range_correction_factor"])  # keep df tidy
+
+            # Range correction applied
+
+            logger.debug(
+                "After range correction: min=%s, max=%s, mean=%s",
+                df["value"].min(),
+                df["value"].max(),
+                df["value"].mean(),
+            )
+
+        # Final sanitize: ensure values are finite and non-negative
+        non_finite_mask = ~np.isfinite(df["value"]) | df["value"].isna()
+        if non_finite_mask.any():
+            count_non_finite = int(non_finite_mask.sum())
+            logger.warning(
+                "Found %d non-finite values after corrections; setting to 0.0",
+                count_non_finite,
+            )
+            df.loc[non_finite_mask, "value"] = 0.0
+
+        num_negative_after = (df["value"] < 0).sum()
+        if num_negative_after:
+            logger.warning(
+                "Found %d negative values after corrections; clipping to 0.0",
+                num_negative_after,
+            )
+            df.loc[df["value"] < 0, "value"] = 0.0
 
         # Group by PM and Channel and sum values
         grouped = df.groupby(["pm", "channel"])["value"].sum().reset_index()
+
+        # Grouped by PM and Channel and summed values
 
         # Convert to nested dictionary {pm: {channel: value}}
         result: Dict[str, Dict[str, float]] = {}
@@ -471,6 +933,7 @@ class CFDRateIntegrationService:
 
         # For PMC9 channels 9, 10, 11, 12, set the value to 0
         if include_pmc9:
+            result.setdefault("PMC9", {})
             for channel in ["Ch09", "Ch10", "Ch11", "Ch12"]:
                 result["PMC9"][channel] = 0.0
 
@@ -594,8 +1057,199 @@ class CFDRateIntegrationService:
                 logger.info(f"Downloaded {len(raw_data)} raw data points")
 
             if not raw_data.empty:
-                # Integrate the raw data
-                integrated_data = self._integrate_cfd_rate(raw_data, end_datetime)
+                # Sanitize and log raw data extremes before integration
+                raw = raw_data.copy()
+                raw["value"] = pd.to_numeric(raw["value"], errors="coerce")
+                raw["timestamp"] = pd.to_datetime(raw["timestamp"], errors="coerce")
+                # Replace exact sentinel constants with NaN to drop them early
+                sentinel_constants = [
+                    float(2**32),
+                    2.555558459872202e38,
+                    3.499597626897072e18,
+                    5.5703071058294735e19,
+                ]
+                # Guard: only proceed if 'value' column
+                # present and numeric coercion possible
+                if "value" in raw.columns:
+                    raw["value"] = pd.to_numeric(raw["value"], errors="coerce")
+                    raw.loc[raw["value"].isin(sentinel_constants), "value"] = np.nan
+                # Clamp sub-physical underflow values to zero (e.g., ~1e-43 artifacts)
+                if "value" in raw.columns:
+                    raw.loc[raw["value"] < 1e-6, "value"] = 0.0
+
+                # Basic stats
+                raw_count = len(raw)
+                ts_min = pd.to_datetime(raw["timestamp"]).min()
+                ts_max = pd.to_datetime(raw["timestamp"]).max()
+                v_min = float(pd.to_numeric(raw["value"]).min())
+                v_max = float(pd.to_numeric(raw["value"]).max())
+                v_median = float(pd.to_numeric(raw["value"]).median())
+                logger.info(
+                    "Raw data stats: n=%d, ts[min,max]=[%s,%s], "
+                    "value[min/median/max]=[%s,%s,%s]",
+                    raw_count,
+                    ts_min,
+                    ts_max,
+                    v_min,
+                    v_median,
+                    v_max,
+                )
+
+                # Top/Bottom values across all elements
+                try:
+                    top_raw = raw.nlargest(5, "value")[
+                        ["timestamp", "element_name", "value"]
+                    ]
+                    bottom_raw_pos = raw[raw["value"] > 0].nsmallest(5, "value")[
+                        ["timestamp", "element_name", "value"]
+                    ]
+                    logger.info(
+                        "Raw extremes: top5=%s, bottom_pos=%s",
+                        top_raw.to_dict(orient="records"),
+                        bottom_raw_pos.to_dict(orient="records"),
+                    )
+                except Exception as e:
+                    logger.debug("Failed to compute raw extremes: %s", e)
+
+                # Sentinel and anomaly pattern checks
+                try:
+                    sentinel_constants = [
+                        float(2**32),  # 4294967296.0, common overflow sentinel
+                        2.555558459872202e38,  # near-float32-max artifact seen in logs
+                        409317376.0,
+                        392055424.0,
+                        409356384.0,
+                        409278368.0,
+                        125155672.0,
+                    ]
+                    sentinel_hits = []
+                    for c in sentinel_constants:
+                        cnt = int((raw["value"] == c).sum())
+                        if cnt:
+                            sentinel_hits.append({"value": c, "count": cnt})
+                    if sentinel_hits:
+                        logger.warning(
+                            "Sentinel-like values detected in raw data: %s",
+                            sentinel_hits,
+                        )
+
+                    # Per-element counts of very large values
+                    very_large = raw[raw["value"] > 1e9]
+                    if not very_large.empty:
+                        per_elem_counts = (
+                            very_large.groupby("element_name")
+                            .size()
+                            .sort_values(ascending=False)
+                            .head(10)
+                        )
+                        logger.warning(
+                            "Elements with very large values (>1e9): %s",
+                            per_elem_counts.to_dict(),
+                        )
+
+                    # Timestamp monotonicity and large gaps per element
+                    def ts_gap_stats(group: pd.DataFrame) -> dict:
+                        ts = pd.to_datetime(group["timestamp"]).astype("int64") / 1e9
+                        ts = ts.sort_values().to_numpy()
+                        if ts.size < 2:
+                            return {"n": int(ts.size), "min_dt": 0, "max_dt": 0}
+                        dts = np.diff(ts)
+                        return {
+                            "n": int(ts.size),
+                            "min_dt": float(np.min(dts)),
+                            "median_dt": float(np.median(dts)),
+                            "max_dt": float(np.max(dts)),
+                            "num_zero_or_negative": int(np.sum(dts <= 0)),
+                        }
+
+                    sample_elems = (
+                        raw["element_name"].value_counts().head(10).index.tolist()
+                    )
+                    ts_diag = {}
+                    for elem in sample_elems:
+                        g = raw[raw["element_name"] == elem]
+                        ts_diag[elem] = ts_gap_stats(g)
+                    logger.debug("Timestamp diagnostics (sample elements): %s", ts_diag)
+                except Exception as e:
+                    logger.debug("Failed sentinel/ts diagnostics: %s", e)
+
+                # Per-element anomaly detection and filtering
+                def filter_element(group: pd.DataFrame) -> pd.DataFrame:
+                    values = pd.to_numeric(group["value"], errors="coerce")
+                    values = values[np.isfinite(values)]
+                    if values.empty:
+                        return group.iloc[0:0]
+                    median_val = float(values.median())
+                    max_val = float(values.max())
+                    p95 = float(np.quantile(values, 0.95))
+                    p99 = float(np.quantile(values, 0.99))
+                    p999 = (
+                        float(np.quantile(values, 0.999)) if len(values) > 1000 else p99
+                    )
+
+                    # Heuristics for suspicious spikes
+                    suspicious = False
+                    reasons = []
+                    if max_val > 1e9:
+                        suspicious = True
+                        reasons.append(f"max>{1e9}")
+                    if median_val > 0 and (max_val / median_val) > 1e6:
+                        suspicious = True
+                        reasons.append("max/median>1e6")
+                    if p999 > 1e9:
+                        suspicious = True
+                        reasons.append("p999>1e9")
+
+                    if suspicious:
+                        # Determine a cap: use robust stats;
+                        # choose the tightest upper bound
+                        elem_name = str(group["element_name"].iloc[0])
+                        cap_candidates: List[float] = []
+                        # Upper cap from distribution
+                        if p95 > 0:
+                            cap_candidates.append(p95 * 10.0)
+                        if median_val > 0:
+                            cap_candidates.append(median_val * 1e4)
+                        # Global hard upper bound
+                        cap_candidates.append(1e6)
+                        # Use the smallest positive cap available
+                        cap_candidates = [c for c in cap_candidates if c and c > 0]
+                        cap = float(min(cap_candidates)) if cap_candidates else 1e6
+                        filtered = group[group["value"] <= cap].copy()
+                        logger.warning(
+                            "Filtering suspicious values for element %s: reasons=%s, "
+                            "median=%s, max=%s, p95=%s, p99=%s, p999=%s, cap=%s, "
+                            "kept=%d/%d",
+                            elem_name,
+                            reasons,
+                            median_val,
+                            max_val,
+                            p95,
+                            p99,
+                            p999,
+                            cap,
+                            len(filtered),
+                            len(group),
+                        )
+                        # Generic post-filter preview to verify results
+                        preview = filtered.nlargest(3, "value")[
+                            ["timestamp", "element_name", "value"]
+                        ].to_dict(orient="records")
+                        logger.info(
+                            "Post-filter preview (top3) for %s: %s",
+                            elem_name,
+                            preview,
+                        )
+                        return filtered
+                    return group
+
+                raw_filtered = raw.groupby("element_name", group_keys=False).apply(
+                    filter_element
+                )
+
+                # If everything got filtered for an element, it will
+                # be re-added as zero later Integrate the filtered raw data
+                integrated_data = self._integrate_cfd_rate(raw_filtered, end_datetime)
             else:
                 integrated_data = pd.DataFrame(
                     columns=["timestamp", "value", "element_name"]

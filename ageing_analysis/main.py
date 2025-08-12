@@ -12,6 +12,7 @@ import os
 import platform
 import sys
 import tkinter as tk
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from tkinter import TclError, filedialog, messagebox, ttk
 
@@ -88,14 +89,34 @@ class AgeingAnalysisApp:
         log_level = logging.DEBUG if self.debug_mode else logging.INFO
         log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
-        # Configure the root logger
-        logging.basicConfig(
-            level=log_level,
-            format=log_format,
-            force=True,  # Override any existing configuration
-        )
+        # Create logs directory
+        logs_dir = Path("logs")
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        log_file_path = logs_dir / "ageing_analysis.log"
 
-        # Also set the level for specific loggers we care about
+        # Prepare handlers
+        formatter = logging.Formatter(log_format)
+
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(log_level)
+        console_handler.setFormatter(formatter)
+
+        file_handler = RotatingFileHandler(
+            log_file_path, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
+        )
+        file_handler.setLevel(log_level)
+        file_handler.setFormatter(formatter)
+
+        # Configure the root logger explicitly to avoid duplicate handlers
+        root_logger = logging.getLogger()
+        # Remove existing handlers
+        for h in list(root_logger.handlers):
+            root_logger.removeHandler(h)
+        root_logger.setLevel(log_level)
+        root_logger.addHandler(console_handler)
+        root_logger.addHandler(file_handler)
+
+        # Ensure our package logger follows the same level
         logging.getLogger("ageing_analysis").setLevel(log_level)
 
         if self.debug_mode:
@@ -377,6 +398,15 @@ class AgeingAnalysisApp:
             style="Large.TButton",
         ).pack(side=tk.LEFT)
 
+        # Placeholder button to load missing range correction configurations
+        self.load_configurations_btn = ttk.Button(
+            config_buttons_frame,
+            text="Load Configurations",
+            command=self._load_range_corrections,  # functionality to be added later
+            style="Large.TButton",
+        )
+        self.load_configurations_btn.pack(side=tk.LEFT, padx=(10, 0))
+
         self.config_status_var = tk.StringVar(value="No configuration loaded")
         ttk.Label(config_frame, textvariable=self.config_status_var).pack(pady=5)
 
@@ -392,6 +422,27 @@ class AgeingAnalysisApp:
         ttk.Label(
             self.integrated_charge_frame, textvariable=self.integrated_charge_status_var
         ).pack(side=tk.LEFT, pady=5)
+
+        # Include range correction toggle (default True)
+        self.include_range_correction_var = tk.BooleanVar(value=True)
+        self.include_range_correction_chk = ttk.Checkbutton(
+            self.integrated_charge_frame,
+            text="Include range correction",
+            variable=self.include_range_correction_var,
+        )
+        self.include_range_correction_chk.pack(side=tk.RIGHT, padx=(0, 10), pady=5)
+
+        # Use latest available configuration (fallback) toggle (default False)
+        self.use_latest_config_var = tk.BooleanVar(value=False)
+        self.use_latest_config_chk = ttk.Checkbutton(
+            self.integrated_charge_frame,
+            text=(
+                "Use latest available configuration "
+                "(only if you cannot find the missing ones)"
+            ),
+            variable=self.use_latest_config_var,
+        )
+        self.use_latest_config_chk.pack(side=tk.RIGHT, padx=(0, 10), pady=5)
 
         self.get_integrated_charge_btn = ttk.Button(
             self.integrated_charge_frame,
@@ -550,14 +601,54 @@ class AgeingAnalysisApp:
                     self.integrated_charge_progress.add_log_message(status)
 
             # Perform the calculation with progress updates
-            integrated_charge_service.integrate_charge_for_config(
-                self.config, progress_callback
-            )
+            include_rc = True
+            try:
+                if hasattr(self, "include_range_correction_var"):
+                    include_rc = bool(self.include_range_correction_var.get())
+            except Exception:
+                include_rc = True
 
+            integrated_charge_service.integrate_charge_for_config(
+                self.config,
+                progress_callback,
+                include_range_correction=include_rc,
+                use_latest_available_configuration=bool(
+                    self.use_latest_config_var.get()
+                ),
+            )
+        except ValueError as e:
+            # Likely missing range correction configurations
+            msg = str(e)
+            logger.error(f"Integrated charge error: {msg}")
+            messagebox.showinfo(
+                "Missing Range Correction Configurations",
+                (
+                    "Some range correction configurations "
+                    "are missing or incomplete.\n\n"
+                    f"Details: {msg}\n\n"
+                    "Please use the 'Load Configurations' button in the Configuration "
+                    "section to load the missing configurations."
+                ),
+            )
+            return
         except Exception as e:
             error_msg = f"Integrated charge calculation failed: {str(e)}"
             logger.error(error_msg)
             raise
+
+    def _load_range_corrections(self):
+        """Load range correction configurations (to be implemented)."""
+        try:
+            messagebox.showinfo(
+                "Load Configurations",
+                (
+                    "This feature will allow loading range "
+                    "correction configurations.\n\n"
+                    "It is not yet implemented."
+                ),
+            )
+        except Exception as e:
+            logger.error(f"Error in load configurations placeholder: {e}")
 
     def _integrated_charge_complete(self):
         """Handle completion of integrated charge calculation."""

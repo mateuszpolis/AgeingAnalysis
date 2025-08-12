@@ -179,37 +179,102 @@ class DarmaApiService:
         Returns:
             A pandas DataFrame with columns: timestamp, value, element_name
         """
+        # We intentionally let pandas raise EmptyDataError on empty files
+        # to keep backward compatibility with existing expectations.
         try:
-            # Read CSV with expected format and existing headers
-            df = pd.read_csv(
+            # Read as raw strings without enforcing dtypes. This lets us
+            # normalize values and timestamps robustly and skip bad rows.
+            raw_df = pd.read_csv(
                 output_file,
                 sep=";",
-                dtype={
-                    "date": str,
-                    "time": str,
-                    "element_name/alias": str,
-                    "value": float,
-                },
+                header=None,
+                names=["date", "time", "element_name", "raw_value"],
+                dtype=str,
+                engine="python",
+                skip_blank_lines=True,
+                on_bad_lines="skip",
             )
-        except (FileNotFoundError, pd.errors.ParserError):
-            # Could log here
+        except FileNotFoundError:
             return pd.DataFrame(columns=["timestamp", "value", "element_name"])
 
-        # Rename the 'element_name/alias' column
-        df.rename(columns={"element_name/alias": "element_name"}, inplace=True)
+        if raw_df.empty:
+            # No rows after reading (e.g., only blanks). Return empty result.
+            return pd.DataFrame(columns=["timestamp", "value", "element_name"])
 
-        # Combine date and time into single datetime column
-        datetime_strs = df["date"] + " " + df["time"]
-        df["timestamp"] = pd.to_datetime(
-            datetime_strs, format="%Y-%m-%d %H:%M:%S", errors="coerce"
+        # Drop the header row if the file included it explicitly.
+        is_header_row = (
+            (raw_df["date"].astype(str).str.lower() == "date")
+            & (raw_df["time"].astype(str).str.lower() == "time")
+            & (
+                raw_df["element_name"]
+                .astype(str)
+                .str.lower()
+                .isin(["element_name", "element_name/alias"])
+            )
+            & (raw_df["raw_value"].astype(str).str.lower() == "value")
         )
+        df = raw_df.loc[~is_header_row].copy()
 
-        # Drop rows where timestamp could not be parsed
-        df = df.dropna(subset=["timestamp"])
+        # Normalize time strings to consistently include fractional seconds if present.
+        def normalize_time_string(time_str: Optional[str]) -> Optional[str]:
+            if pd.isna(time_str):
+                return None
+            s = str(time_str).strip()
+            if not s:
+                return None
+            if "." in s:
+                hhmmss, frac = s.split(".", 1)
+                # Keep up to 6 digits for microsecond precision (pandas friendly)
+                frac = (frac + "000000")[:6]
+                return f"{hhmmss}.{frac}"
+            # No fractional seconds -> append microseconds .000000
+            return f"{s}.000000"
 
-        # Keep only needed columns and reorder
+        # Build timestamps from date and normalized time;
+        # handle both DD.MM.YYYY and YYYY-MM-DD
+        normalized_time = df["time"].apply(normalize_time_string)
+        datetime_strs = (
+            df["date"].astype(str).str.strip() + " " + normalized_time.astype(str)
+        )
+        # First try a fixed format with fractional seconds;
+        # if that fails, fall back to general parser
+        timestamps = pd.to_datetime(
+            datetime_strs, format="%d.%m.%Y %H:%M:%S.%f", errors="coerce"
+        )
+        # Fill NaT by trying ISO format as well (YYYY-MM-DD)
+        need_iso = timestamps.isna()
+        if need_iso.any():
+            timestamps_iso = pd.to_datetime(datetime_strs[need_iso], errors="coerce")
+            timestamps.loc[need_iso] = timestamps_iso
+
+        df["timestamp"] = timestamps
+
+        # Clean and parse numeric values
+        def normalize_numeric_string(v: Optional[str]) -> Optional[str]:
+            if pd.isna(v):
+                return None
+            s = str(v).strip()
+            if not s:
+                return None
+            # Remove trailing dot (e.g., "1234.")
+            if s.endswith("."):
+                s = s[:-1]
+            # Prepend 0 for leading dot (e.g., ".07")
+            if s.startswith("."):
+                s = "0" + s
+            return s
+
+        cleaned_values = df["raw_value"].apply(normalize_numeric_string)
+        numeric_values = pd.to_numeric(cleaned_values, errors="coerce")
+        df["value"] = numeric_values
+
+        # Keep only valid rows (both timestamp and value parsed)
+        df = df.dropna(subset=["timestamp", "value"]).copy()
+
+        # Keep only needed columns and reorder; rename element column to match API
+        df.rename(columns={"element_name": "element_name"}, inplace=True)
         result = df[["timestamp", "value", "element_name"]].copy()
-
+        result.reset_index(drop=True, inplace=True)
         return result
 
     def _parse_multiple_responses(self, output_files: List[Path]) -> pd.DataFrame:

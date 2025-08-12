@@ -163,13 +163,23 @@ class IntegratedChargeService:
         return unique_values
 
     def integrate_charge_for_config(
-        self, config: Config, progress_callback=None
+        self,
+        config: Config,
+        progress_callback=None,
+        include_range_correction: bool = True,
+        use_latest_available_configuration: bool = False,
     ) -> None:
         """Integrate charge for a config.
 
         Args:
             config: The config to integrate charge for.
             progress_callback: Optional callback function to report progress.
+            include_range_correction: Whether to apply range-correction to
+                integrated charge values during computation. If True, values are
+                adjusted by detector-specific range correction factors.
+            use_latest_available_configuration: When range-correction data is
+                missing for an integration period, attempt to fall back to the
+                latest available configuration prior to the period.
         """
         current_integrated_charge = (
             self.cfd_rate_integration_service.get_empty_pm_channel_dict(
@@ -205,11 +215,18 @@ class IntegratedChargeService:
                     f"(Dataset {i+1} of {total_datasets})",
                 )
 
-            integrated_charge = (
-                self.cfd_rate_integration_service.get_integrated_cfd_rate(
-                    start_date, end_date, multiply_by_mu=True
-                )
+            integrated_cfd_rate_fn = (
+                self.cfd_rate_integration_service.get_integrated_cfd_rate
             )
+            integrated_charge = integrated_cfd_rate_fn(
+                start_date,
+                end_date,
+                multiply_by_mu=True,
+                include_range_correction=include_range_correction,
+                use_latest_available_configuration=use_latest_available_configuration,
+            )
+
+            # Do not log actual values to avoid leaking sensitive data
 
             # Add the new integrated charge to the cumulative total
             for pm, channels in integrated_charge.items():
