@@ -1,3 +1,10 @@
+# [1.16.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.15.0...v1.16.0) (2025-08-12)
+
+
+### Features
+
+* **range_correction:** implement GUI for loading range-correction configurations ([dbc7c9f](https://github.com/mateuszpolis/AgeingAnalysis/commit/dbc7c9f235def850c61206c2b6e6d2c5809f2007))
+
 # [1.15.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.14.0...v1.15.0) (2025-08-12)
 
 
