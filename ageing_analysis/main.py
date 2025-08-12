@@ -21,6 +21,7 @@ from ageing_analysis.services.integrated_charge_service import IntegratedChargeS
 from .entities import Config
 from .gui import AgeingVisualizationWindow, ConfigGeneratorWidget, ProgressWindow
 from .gui.integrated_charge_progress_window import IntegratedChargeProgressWindow
+from .gui.range_correction_loader_window import RangeCorrectionLoaderWindow
 from .services import (
     AgeingCalculationService,
     DataNormalizer,
@@ -637,18 +638,15 @@ class AgeingAnalysisApp:
             raise
 
     def _load_range_corrections(self):
-        """Load range correction configurations (to be implemented)."""
+        """Open a window to load range-correction configurations.
+
+        Allows loading from a file, folder, or archive (zip/tar).
+        """
         try:
-            messagebox.showinfo(
-                "Load Configurations",
-                (
-                    "This feature will allow loading range "
-                    "correction configurations.\n\n"
-                    "It is not yet implemented."
-                ),
-            )
+            loader = RangeCorrectionLoaderWindow(self.root)
+            loader.show()
         except Exception as e:
-            logger.error(f"Error in load configurations placeholder: {e}")
+            logger.error(f"Error opening Load Configurations window: {e}")
 
     def _integrated_charge_complete(self):
         """Handle completion of integrated charge calculation."""
