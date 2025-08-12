@@ -20,6 +20,7 @@ from ageing_analysis.services.integrated_charge_service import IntegratedChargeS
 
 from .entities import Config
 from .gui import AgeingVisualizationWindow, ConfigGeneratorWidget, ProgressWindow
+from .gui.control_server_logs_loader_window import ControlServerLogsLoaderWindow
 from .gui.integrated_charge_progress_window import IntegratedChargeProgressWindow
 from .gui.range_correction_loader_window import RangeCorrectionLoaderWindow
 from .services import (
@@ -350,6 +351,15 @@ class AgeingAnalysisApp:
         analysis_menu.add_command(
             label="Fit Gaussians Only", command=self._fit_gaussians_only
         )
+        analysis_menu.add_separator()
+        analysis_menu.add_command(
+            label="Load Range-Correction Configurations",
+            command=self._load_range_corrections,
+        )
+        analysis_menu.add_command(
+            label="Parse Control Server Logs",
+            command=self._parse_control_server_logs,
+        )
 
         # Help menu
         help_menu = tk.Menu(menubar, tearoff=0)
@@ -407,6 +417,15 @@ class AgeingAnalysisApp:
             style="Large.TButton",
         )
         self.load_configurations_btn.pack(side=tk.LEFT, padx=(10, 0))
+
+        # Button to parse control server logs (next to Load Configurations)
+        self.control_logs_btn = ttk.Button(
+            config_buttons_frame,
+            text="Parse Control Server Logs",
+            command=self._parse_control_server_logs,
+            style="Large.TButton",
+        )
+        self.control_logs_btn.pack(side=tk.LEFT, padx=(10, 0))
 
         self.config_status_var = tk.StringVar(value="No configuration loaded")
         ttk.Label(config_frame, textvariable=self.config_status_var).pack(pady=5)
@@ -647,6 +666,14 @@ class AgeingAnalysisApp:
             loader.show()
         except Exception as e:
             logger.error(f"Error opening Load Configurations window: {e}")
+
+    def _parse_control_server_logs(self):
+        """Open a window to parse control server logs for configuration loads."""
+        try:
+            loader = ControlServerLogsLoaderWindow(self.root)
+            loader.show()
+        except Exception as e:
+            logger.error(f"Error opening Control Server Logs window: {e}")
 
     def _integrated_charge_complete(self):
         """Handle completion of integrated charge calculation."""
