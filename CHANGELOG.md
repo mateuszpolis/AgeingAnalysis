@@ -1,3 +1,10 @@
+# [1.17.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.16.0...v1.17.0) (2025-08-12)
+
+
+### Features
+
+* **control_server_logs:** add GUI for parsing control server logs ([8d649d6](https://github.com/mateuszpolis/AgeingAnalysis/commit/8d649d69b82d039ee1fb500e37a087a3288e7c33))
+
 # [1.16.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.15.0...v1.16.0) (2025-08-12)
 
 
