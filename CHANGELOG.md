@@ -1,3 +1,10 @@
+# [1.15.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.14.0...v1.15.0) (2025-08-12)
+
+
+### Features
+
+* **logging:** enhance logging setup and add range correction features ([8baa0c8](https://github.com/mateuszpolis/AgeingAnalysis/commit/8baa0c802cdda8f23736d8122670118629f8dd0f))
+
 # [1.14.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.13.0...v1.14.0) (2025-08-01)
 
 
