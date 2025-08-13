@@ -556,6 +556,7 @@ class GridVisualizationService:
         ageing_factor_type: str = "normalized_gauss_ageing_factor",
         selected_date: Optional[str] = None,
         results_data: Optional[Dict] = None,
+        custom_colormap_colors: Optional[List[str]] = None,
     ) -> Figure:
         """Create the actual grid visualization figure.
 
@@ -577,7 +578,12 @@ class GridVisualizationService:
         ax = fig.add_subplot(111)
 
         # Create the grid visualization using rectangles
-        cmap = plt.get_cmap(colormap)
+        if colormap == "custom" and custom_colormap_colors:
+            from matplotlib.colors import ListedColormap
+
+            cmap = ListedColormap(custom_colormap_colors)
+        else:
+            cmap = plt.get_cmap(colormap)
 
         # Collect data points
         x_positions = []
@@ -684,6 +690,126 @@ class GridVisualizationService:
         fig.tight_layout()
 
         return fig
+
+    def create_grid_gif(
+        self,
+        mapping_name: str,
+        results_data: Dict,
+        output_path: str,
+        colormap: str = "RdYlGn",
+        vmin: float = 0.4,
+        vmax: float = 1.2,
+        ageing_factor_type: str = "normalized_gauss_ageing_factor",
+        duration_ms: int = 500,
+        loop: int = 0,
+        custom_colormap_colors: Optional[List[str]] = None,
+    ) -> bool:
+        """Create an animated GIF over all available dates.
+
+        Args:
+            mapping_name: Name of the mapping to use
+            results_data: Analysis results data
+            output_path: File path to save the GIF
+            colormap: Matplotlib colormap name or "custom"
+            vmin: Minimum value for color scaling
+            vmax: Maximum value for color scaling
+            ageing_factor_type: Type of ageing factor to display
+            duration_ms: Duration of each frame in milliseconds
+            loop: Number of GIF loops (0 means infinite)
+            custom_colormap_colors: Color list when colormap == "custom"
+
+        Returns:
+            True if the GIF was successfully created, False otherwise
+        """
+        try:
+            import io
+
+            from PIL import Image
+        except Exception as e:
+            logger.error(
+                "Pillow is required to create GIFs. Please install 'Pillow'. Error: %s",
+                e,
+            )
+            return False
+
+        mapping_info = self.get_mapping(mapping_name)
+        if not mapping_info:
+            logger.error("Mapping '%s' not found", mapping_name)
+            return False
+
+        dates = self.get_available_dates(results_data)
+        if not dates:
+            logger.error("No dates available to create GIF")
+            return False
+
+        frames: List[Image.Image] = []
+
+        for date in dates:
+            fig = None
+            try:
+                ageing_factors = self._extract_ageing_factors(
+                    results_data,
+                    selected_date=date,
+                    ageing_factor_type=ageing_factor_type,
+                )
+
+                fig = self._create_grid_figure(
+                    mapping_info["mapping"],
+                    ageing_factors,
+                    colormap,
+                    vmin,
+                    vmax,
+                    mapping_name,
+                    ageing_factor_type,
+                    selected_date=date,
+                    results_data=results_data,
+                    custom_colormap_colors=custom_colormap_colors,
+                )
+
+                # Render figure to an in-memory PNG and convert to PIL.Image
+                buf = io.BytesIO()
+                fig.savefig(
+                    buf, format="png", dpi=100, bbox_inches="tight", facecolor="white"
+                )
+                buf.seek(0)
+                img = Image.open(buf).convert("P")
+                frames.append(img)
+            except Exception as e:
+                logger.error("Failed to render frame for date %s: %s", date, e)
+            finally:
+                if fig is not None:
+                    try:
+                        import matplotlib.pyplot as _plt
+
+                        _plt.close(fig)
+                    except Exception as close_err:
+                        logger.debug(
+                            "Ignoring error when closing figure for date %s: %s",
+                            date,
+                            close_err,
+                        )
+
+        if not frames:
+            logger.error("No frames were generated for the GIF")
+            return False
+
+        try:
+            # Save GIF
+            first, rest = frames[0], frames[1:]
+            first.save(
+                output_path,
+                save_all=True,
+                append_images=rest,
+                duration=duration_ms,
+                loop=loop,
+                optimize=True,
+                disposal=2,
+            )
+            logger.info("Saved grid visualization GIF to %s", output_path)
+            return True
+        except Exception as e:
+            logger.error("Failed to save GIF to %s: %s", output_path, e)
+            return False
 
     def refresh_mappings(self):
         """Refresh the mappings cache by reloading all mapping files."""

@@ -202,6 +202,11 @@ class GridVisualizationTab:
         )
         save_button.pack(side=tk.LEFT)
 
+        save_gif_button = ttk.Button(
+            button_frame, text="Save GIF", command=self._save_gif
+        )
+        save_gif_button.pack(side=tk.LEFT, padx=(10, 0))
+
         # Plot area
         plot_frame = ttk.LabelFrame(main_frame, text="Grid Visualization", padding=10)
         plot_frame.pack(fill=tk.BOTH, expand=True)
@@ -465,6 +470,91 @@ class GridVisualizationTab:
             logger.error(error_msg)
             messagebox.showerror("Error", error_msg, parent=self.frame)
             self.status_var.set("Failed to save plot")
+
+    def _save_gif(self):
+        """Generate and save an animated GIF over all available dates."""
+        try:
+            from pathlib import Path
+            from tkinter import filedialog
+        except Exception:
+            messagebox.showerror("Error", "Failed to open save dialog")
+            return
+
+        if not self.results_data:
+            messagebox.showwarning("Warning", "No results data available")
+            return
+
+        mapping_name = self.mapping_var.get()
+        if not mapping_name or mapping_name == "No mappings available":
+            messagebox.showwarning("Warning", "No mapping selected")
+            return
+
+        # Suggest default filename
+        default_filename = f"grid_visualization_{mapping_name}_animation.gif"
+
+        file_path = filedialog.asksaveasfilename(
+            title="Save Grid Visualization GIF",
+            defaultextension=".gif",
+            initialfile=default_filename,
+            filetypes=[
+                ("GIF files", "*.gif"),
+                ("All files", "*.*"),
+            ],
+            parent=self.frame,
+        )
+
+        if not file_path:
+            return
+
+        try:
+            # Collect current parameters
+            colormap = self.colormap_var.get()
+            vmin = float(self.vmin_var.get())
+            vmax = float(self.vmax_var.get())
+            ageing_factor_type = self.ageing_factor_var.get()
+
+            # For custom colormap pass the palette
+            custom_colors = (
+                self.custom_colormap_colors if colormap == "custom" else None
+            )
+
+            success = self.grid_service.create_grid_gif(
+                mapping_name=mapping_name,
+                results_data=self.results_data,
+                output_path=file_path,
+                colormap=colormap,
+                vmin=vmin,
+                vmax=vmax,
+                ageing_factor_type=ageing_factor_type,
+                custom_colormap_colors=custom_colors,
+            )
+
+            if success:
+                filename = Path(file_path).name
+                self.status_var.set(f"Grid visualization GIF saved as {filename}")
+                messagebox.showinfo(
+                    "Success",
+                    (
+                        f"Grid visualization GIF saved successfully!\n\n"
+                        f"File: {filename}\n"
+                        f"Location: {Path(file_path).parent}"
+                    ),
+                    parent=self.frame,
+                )
+            else:
+                self.status_var.set("Failed to save GIF")
+                messagebox.showerror(
+                    "Error",
+                    "Failed to create the GIF. Ensure Pillow is installed "
+                    "(pip install Pillow) and try again.",
+                    parent=self.frame,
+                )
+        except Exception as e:
+            logger.error(f"Failed to save GIF: {e}")
+            self.status_var.set("Failed to save GIF")
+            messagebox.showerror(
+                "Error", f"Failed to save GIF: {str(e)}", parent=self.frame
+            )
 
     def _update_visualization(self):
         """Update the grid visualization."""
