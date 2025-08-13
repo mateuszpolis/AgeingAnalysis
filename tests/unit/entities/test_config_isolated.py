@@ -6,7 +6,7 @@ This module focuses on path resolution.
 import json
 import os
 import tempfile
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -534,14 +534,19 @@ class TestConfigFileHandling:
 
         assert result == results_data
 
-    @patch("builtins.open", new_callable=mock_open)
-    @patch("json.load")
-    def test_file_reading_error_handling(self, mock_json_load, mock_file_open):
-        """Test error handling during file reading."""
-        mock_json_load.side_effect = json.JSONDecodeError("Invalid JSON", "", 0)
+    def test_file_reading_error_handling(self):
+        """Test error handling during file reading with an invalid JSON file.
 
+        Creates and attempts to read an invalid JSON file to verify error handling.
+        """
+        # Create an invalid JSON file in the temp directory
+        invalid_path = os.path.join(self.temp_dir, "invalid_config.json")
+        with open(invalid_path, "w") as f:
+            f.write("{ invalid json }")
+
+        # Expect JSONDecodeError when attempting to load invalid JSON
         with pytest.raises(json.JSONDecodeError):
-            Config("invalid_config.json")
+            Config(invalid_path)
 
     def test_empty_inputs_list(self):
         """Test handling of empty inputs list."""

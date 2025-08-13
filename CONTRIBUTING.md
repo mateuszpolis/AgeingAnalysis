@@ -62,7 +62,7 @@ Examples:
 
 ### Commit Messages
 
-We use [Conventional Commits](https://www.conventionalcommits.org/) for automated versioning and changelog generation.
+We use [Conventional Commits](https://www.conventionalcommits.org/) for automated versioning and changelog generation. All commits MUST follow this format — non-conforming commits may be rejected by hooks/CI.
 
 **Format:** `<type>[optional scope]: <description>`
 
@@ -75,6 +75,9 @@ We use [Conventional Commits](https://www.conventionalcommits.org/) for automate
 - `perf`: Performance improvements
 - `test`: Adding missing tests or correcting existing tests
 - `chore`: Changes to the build process or auxiliary tools
+ - `ci`: CI configuration changes
+ - `build`: Build system or dependency changes
+ - `revert`: Revert previous commits
 
 **Examples:**
 ```
@@ -83,6 +86,22 @@ fix: resolve data parser memory leak
 docs: update API documentation for plotting module
 test: add unit tests for reference channel service
 refactor: improve error handling in analysis pipeline
+```
+
+#### Breaking changes
+
+Indicate with `!` after the type/scope or include `BREAKING CHANGE:` in the footer.
+
+Examples:
+```
+feat!: remove deprecated API
+feat(api)!: change endpoint structure
+```
+Or:
+```
+feat(api): add new endpoint
+
+BREAKING CHANGE: The old endpoint has been removed
 ```
 
 ### Pull Request Process
@@ -239,21 +258,37 @@ tests/
 
 ## Release Process
 
-Releases are automated using conventional commits:
+We use semantic-release/commitizen for automated versioning and releases.
 
-1. **Automatic Versioning**
-   - `feat:` commits trigger minor version bumps
-   - `fix:` commits trigger patch version bumps
-   - `BREAKING CHANGE:` triggers major version bumps
+### Automatic versioning
+- `fix:` → PATCH (x.y.Z)
+- `feat:` → MINOR (x.Y.0)
+- `BREAKING CHANGE:` or `!` → MAJOR (X.0.0)
 
-2. **Release Notes**
-   - Generated automatically from conventional commits
-   - Include all changes since last release
+### How releases are created
+On pushes to `main` (after tests pass):
+1. Commits are analyzed to determine the next version
+2. Version is bumped (e.g., in `pyproject.toml` and `ageing_analysis/__init__.py` if configured)
+3. `CHANGELOG.md` is updated
+4. A Git tag is created
+5. A GitHub release is created with artifacts (wheel/sdist, archives)
 
-3. **Distribution**
-   - Automated builds and tests
-   - Automatic PyPI publication (if configured)
-   - GitHub releases with artifacts
+### Local helpers
+If using Commitizen:
+```
+pip install commitizen
+cz commit           # guided commit creation
+cz bump             # bump version locally (optional)
+cz bump --dry-run   # preview version bump
+```
+
+### Example commit messages
+```
+feat(parser): support new CSV format
+fix(plotting): correct axis scaling
+docs: update installation instructions
+feat!: change API structure
+```
 
 ## Getting Help
 

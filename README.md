@@ -21,6 +21,15 @@ The AgeingAnalysis module provides a complete pipeline for processing FIT detect
 - **Progress Tracking**: Real-time progress updates during analysis
 - **Export Capabilities**: Save results in various formats
 
+## Goals
+
+AgeingAnalysis helps detector experts and analysts to:
+- Quantify detector ageing by computing per-channel ageing factors over time
+- Compare modules and reference channels with robust normalization
+- Inspect data quality and trends through interactive visualization
+- Automate batch processing for large datasets and reproducible studies
+- Integrate into a launcher/GUI ecosystem and support a headless workflow
+
 ## Installation
 
 As a submodule in the FIT Detector Toolkit:
@@ -69,6 +78,15 @@ from ageing_analysis import launch_module
 launch_module()
 ```
 
+## Documentation
+
+- [Usage Guide](USAGE.md): GUI, headless mode, configuration format, and examples
+- [Configuration Generator](USAGE.md#configuration-generator-gui): GUI-integrated tool for building configs
+- [Contributing & Releases](CONTRIBUTING.md): commit style, tests, and release automation
+- API and internals: browse the `ageing_analysis/` package for services, GUI, and utils
+- Tests: see `tests/` for unit and integration coverage
+- Extended docs (Sphinx, if used): see `docs/`
+
 ## Module Structure
 
 ```
@@ -101,3 +119,5 @@ The module uses configuration files for:
 ## Contributing
 
 This module is part of the FIT Detector Toolkit project. Please follow the project's contributing guidelines.
+
+If any of the goals or documentation structure above need adjustments, tell us what you're aiming to achieve and we will refine the docs accordingly.
