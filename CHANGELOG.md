@@ -1,3 +1,10 @@
+# [1.18.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.17.0...v1.18.0) (2025-08-13)
+
+
+### Features
+
+* **grid_visualization:** add GIF export functionality to grid visualization ([6740d50](https://github.com/mateuszpolis/AgeingAnalysis/commit/6740d50943658096a107f4facbeac60c484eeffa))
+
 # [1.17.0](https://github.com/mateuszpolis/AgeingAnalysis/compare/v1.16.0...v1.17.0) (2025-08-12)
 
 

@@ -27,7 +27,7 @@ Usage:
     parser.process_all_files()
 """
 
-__version__ = "1.17.0"
+__version__ = "1.18.0"
 __author__ = "Mateusz Polis"
 
 # Core imports: entities, main app, services, and utilities
