@@ -1,10 +1,12 @@
 # Contributing to AgeingAnalysis
 
-Welcome! We're excited that you're interested in contributing to the AgeingAnalysis module. This document provides guidelines for contributing to the project.
+[← Back to main README](README.md)
 
-## Code of Conduct
+This document provides guidelines for contributing to the project.
 
-By participating in this project, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md).
+## Collaboration Guidelines
+
+Please keep contributions respectful and constructive. Reviews and discussions should focus on technical quality and clarity. This project is maintained primarily for internal use, so processes are intentionally lightweight.
 
 ## Getting Started
 
@@ -18,7 +20,7 @@ By participating in this project, you agree to abide by our [Code of Conduct](CO
 
 1. **Fork and Clone**
    ```bash
-   git clone https://github.com/your-username/AgeingAnalysis.git
+   git clone https://github.com/mateuszpolis/AgeingAnalysis.git
    cd AgeingAnalysis
    ```
 
@@ -116,37 +118,34 @@ BREAKING CHANGE: The old endpoint has been removed
    - Add tests for new functionality
    - Update documentation as needed
 
-3. **Test Your Changes**
+3. **Tests and Hooks**
+   - Ensure pre-commit hooks are installed (see Getting Started). They will run tests automatically on commit; you do not need to run tests manually.
+
+4. **Optional: Check Code Coverage**
    ```bash
-   # Run all tests
-   pytest
-
-   # Run specific test categories
-   pytest -m unit
-   pytest -m integration
-
-   # Check code coverage
    pytest --cov=ageing_analysis --cov-report=html
+   # Then open the HTML report in your browser:
+   # htmlcov/index.html
    ```
 
-4. **Run Pre-commit Checks**
+5. **Run Pre-commit Checks**
    ```bash
    pre-commit run --all-files
    ```
 
-5. **Commit Changes**
+6. **Commit Changes**
    ```bash
    git add .
    git commit -m "feat: add new feature"
    ```
 
-6. **Push and Create PR**
+7. **Push and Create PR**
    ```bash
    git push origin feature/your-feature-name
    ```
 
-7. **Create Pull Request**
-   - Use the PR template
+8. **Create Pull Request**
+   - Use the provided PR template (`.github/PULL_REQUEST_TEMPLATE.md`)
    - Link to relevant issues
    - Provide clear description of changes
 
@@ -240,21 +239,26 @@ tests/
 - Update installation instructions if needed
 
 ### API Documentation
-- Documentation is auto-generated from docstrings
+- Location: the `docs/` directory (Sphinx)
+- Source: auto-generated from docstrings where applicable
+- Build locally:
+  ```bash
+  make -C docs html
+  # then open docs/_build/html/index.html
+  ```
 - Ensure docstrings are comprehensive and accurate
 
 ## Issue Guidelines
 
-### Bug Reports
-- Use the bug report template
-- Include reproduction steps
-- Provide environment details
-- Include error messages and stack traces
+When opening an issue, please use the provided templates for consistency:
 
-### Feature Requests
-- Use the feature request template
-- Explain the use case
-- Provide implementation suggestions if you have them
+- **Bug Reports**: Use `.github/ISSUE_TEMPLATE/bug_report.md`
+- **Feature Requests**: Use `.github/ISSUE_TEMPLATE/feature_request.md`
+
+These templates will guide you to provide all necessary information:
+
+- Bug reports: Steps to reproduce, expected vs actual behavior, environment details, logs/errors, and config snippets
+- Feature requests: Use case, motivation, desired behavior, and optional implementation suggestions
 
 ## Release Process
 
@@ -320,13 +324,4 @@ AgeingAnalysis/
 └── scripts/                 # Development scripts
 ```
 
-## Migration Guidelines
-
-When migrating code from the `/old` directory:
-1. Follow the new module structure
-2. Update imports and dependencies
-3. Add proper type hints and docstrings
-4. Write comprehensive tests
-5. Update documentation
-
-Thank you for contributing to AgeingAnalysis! 🚀
+Thank you for contributing to AgeingAnalysis!

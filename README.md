@@ -2,6 +2,30 @@
 
 A comprehensive FIT detector data analysis tool for calculating and visualizing ageing factors.
 
+## Problem
+
+In FT0, each PMT (photomultiplier tube) channel's gain changes over time due to ageing effects (mainly photocathode degradation and dynode wear from accumulated charge). To keep the detector response uniform and stable, we need to determine a relative ageing factor for each channel.
+
+That factor is then used to recalibrate gain settings and discriminator thresholds, so that differences in channel sensitivity don't bias the physics measurements (e.g., trigger efficiency, timing resolution, amplitude calibration).
+
+## Goals
+
+AgeingAnalysis helps to:
+- Quantify detector ageing by computing per-channel relative ageing factors over time
+- Compare modules and reference channels with robust normalization
+- Inspect data quality and trends through interactive visualization
+- Automate batch processing for large datasets and reproducible studies
+- Integrate into a launcher/GUI ecosystem while also supporting a headless workflow
+
+## Why this tool
+
+- Automatic end-to-end calculations with a built-in analysis module
+- Grid visualizations for quick spatial insights across channels/modules
+- Minimal user setup: provide only
+  - configuration loads (control server logs)
+  - configuration files (.cfg)
+  and the program performs the full analysis
+
 ## Overview
 
 The AgeingAnalysis module provides a complete pipeline for processing FIT detector data, including:
@@ -21,15 +45,6 @@ The AgeingAnalysis module provides a complete pipeline for processing FIT detect
 - **Progress Tracking**: Real-time progress updates during analysis
 - **Export Capabilities**: Save results in various formats
 
-## Goals
-
-AgeingAnalysis helps detector experts and analysts to:
-- Quantify detector ageing by computing per-channel ageing factors over time
-- Compare modules and reference channels with robust normalization
-- Inspect data quality and trends through interactive visualization
-- Automate batch processing for large datasets and reproducible studies
-- Integrate into a launcher/GUI ecosystem and support a headless workflow
-
 ## Installation
 
 As a submodule in the FIT Detector Toolkit:
@@ -41,21 +56,6 @@ git submodule add <repository-url> modules/ageing-analysis
 # Install dependencies
 pip install -r modules/ageing-analysis/requirements.txt
 ```
-
-## DA_batch_client Requirement
-
-**Important**: The AgeingAnalysis module includes integration with the DA_batch_client for retrieving data from the DARMA API. However, the DA_batch_client is a private component that cannot be shared publicly due to licensing restrictions.
-
-### To use the DARMA API functionality:
-
-1. **Request Access**: Contact the development team to request access to the DA_batch_client component
-2. **Installation**: Once you have access, the DA_batch_client will be provided separately
-3. **Placement**: Place the DA_batch_client files in the `ageing_analysis/utils/da_batch_client/` directory
-4. **Dependencies**: Ensure you have the `requests` library installed (`pip install requests>=2.28.0`)
-
-### Without DA_batch_client:
-
-The module will still function for local data analysis, but the DARMA API integration features will not be available. All other functionality (data parsing, analysis, visualization) remains fully operational.
 
 ## Usage
 
@@ -85,7 +85,6 @@ launch_module()
 - [Contributing & Releases](CONTRIBUTING.md): commit style, tests, and release automation
 - API and internals: browse the `ageing_analysis/` package for services, GUI, and utils
 - Tests: see `tests/` for unit and integration coverage
-- Extended docs (Sphinx, if used): see `docs/`
 
 ## Module Structure
 
@@ -119,5 +118,3 @@ The module uses configuration files for:
 ## Contributing
 
 This module is part of the FIT Detector Toolkit project. Please follow the project's contributing guidelines.
-
-If any of the goals or documentation structure above need adjustments, tell us what you're aiming to achieve and we will refine the docs accordingly.

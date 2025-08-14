@@ -12,9 +12,9 @@ A clear and concise description of what the bug is.
 
 ## To Reproduce
 Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
+1. Load configuration file: '...'
+2. Run analysis with: '....'
+3. Process data from: '....'
 4. See error
 
 ## Expected Behavior
@@ -29,11 +29,18 @@ If applicable, add screenshots to help explain your problem.
 ## Environment
 - OS: [e.g. Ubuntu 20.04, Windows 10, macOS 12.0]
 - Python version: [e.g. 3.9.7]
-- Package version: [e.g. 1.0.0]
-- Installation method: [e.g. pip, conda, from source]
+- AgeingAnalysis version: [e.g. 1.0.0]
+- Installation method: [e.g. pip install -e ., pip install -r requirements.txt]
+- Data format: [e.g. CSV, parquet, specific detector format]
 
 ## Additional Context
 Add any other context about the problem here.
+
+**For AgeingAnalysis specific issues, please include:**
+- Configuration file snippet (if relevant)
+- Sample data format/structure
+- Whether this occurs in GUI mode, headless mode, or both
+- Any error messages from the logs
 
 ## Possible Solution
 If you have suggestions on how to fix the bug, please describe them here.

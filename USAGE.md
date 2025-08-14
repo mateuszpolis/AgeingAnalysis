@@ -1,5 +1,7 @@
 # AgeingAnalysis Usage Guide
 
+[← Back to main README](README.md)
+
 This guide explains how to use the FIT Detector Ageing Analysis tool both with GUI and in headless mode.
 
 ## Installation
@@ -44,6 +46,17 @@ python run_ageing_analysis.py --headless --config config.json --output my_result
 
 # With verbose logging
 python run_ageing_analysis.py --headless --config config.json --verbose
+
+# With debug mode (extra checks and debug plots)
+python run_ageing_analysis.py --headless --config config.json --debug
+
+# Tuning peak detection parameters
+python run_ageing_analysis.py --headless --config config.json \
+  --prominence-percent 20 \
+  --peak-merge-threshold 7
+
+# Using the module entry point
+python -m ageing_analysis.main --headless --config config.json -v -d -p 20 -m 7
 ```
 
 ## Command Line Arguments
@@ -55,6 +68,9 @@ python run_ageing_analysis.py --headless --config config.json --verbose
 ### Optional Arguments
 - `--output`, `-o`: Custom output path for results
 - `--verbose`, `-v`: Enable verbose logging
+- `--debug`, `-d`: Enable debug mode (extra diagnostics and debug plots)
+- `--prominence-percent`, `-p`: Prominence percentage for peak detection (default: 15)
+- `--peak-merge-threshold`, `-m`: Merge peaks whose bases are this close (default: 5)
 - `--help`, `-h`: Show help message
 
 ## Configuration File
@@ -199,6 +215,18 @@ python run_ageing_analysis.py --headless --config my_config.json
 # Results saved to: /path/to/results_20240115_142030.json
 ```
 
+### Example 2b: Headless Analysis with Debug and Tuning
+```bash
+# Enable verbose + debug logs and tune peak detection
+python run_ageing_analysis.py \
+  --headless \
+  --config my_config.json \
+  --verbose \
+  --debug \
+  --prominence-percent 20 \
+  --peak-merge-threshold 7
+```
+
 ### Example 3: Custom Output Path
 ```bash
 # Specify custom output location
@@ -209,6 +237,12 @@ python run_ageing_analysis.py --headless --config config.json --output final_res
 ```bash
 # Enable detailed logging
 python run_ageing_analysis.py --headless --config config.json --verbose
+```
+
+### Example 5: Debug Mode
+```bash
+# Enable debug mode (additional checks and debug plots)
+python run_ageing_analysis.py --headless --config config.json --debug
 ```
 
 ## Output Files
@@ -252,13 +286,18 @@ The analysis generates the following output files:
    python run_ageing_analysis.py --headless --config config.json --verbose
    ```
 
-2. **Check Configuration File**
+2. **Enable Debug Mode**
+```bash
+python run_ageing_analysis.py --headless --config config.json --debug
+```
+
+3. **Check Configuration File**
    ```bash
    # Validate JSON format
    python -c "import json; print(json.load(open('config.json')))"
    ```
 
-3. **Test with GUI First**
+4. **Test with GUI First**
    ```bash
    # Run with GUI to verify configuration
    python run_ageing_analysis.py

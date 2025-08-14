@@ -46,11 +46,7 @@ if ageing_analysis.is_module_available():
 :maxdepth: 2
 :caption: Contents:
 
-installation
-user_guide/index
-api/index
-development/index
-changelog
+api
 ```
 
 ## Features

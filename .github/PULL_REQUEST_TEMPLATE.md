@@ -39,7 +39,8 @@
 - [ ] Tests pass locally
 - [ ] New tests added for new functionality
 - [ ] Existing tests updated if necessary
-- [ ] Manual testing performed
+- [ ] Manual testing performed (GUI and/or headless mode as applicable)
+- [ ] Pre-commit hooks run successfully
 
 ### Test Results
 
@@ -72,11 +73,14 @@
 - [ ] Integration tests added/updated (if applicable)
 - [ ] All tests pass
 - [ ] Code coverage maintained or improved
+- [ ] Pre-commit hooks pass
+- [ ] Manual testing in both GUI and headless modes (if applicable)
 
 ### Dependencies
 - [ ] No new dependencies added, or dependencies properly justified
 - [ ] Requirements files updated (if needed)
 - [ ] Dependency versions pinned appropriately
+- [ ] New dependencies added to both requirements.txt and setup.py (if applicable)
 
 ## Breaking Changes
 
